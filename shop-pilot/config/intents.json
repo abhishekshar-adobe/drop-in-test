@@ -1,0 +1,61 @@
+{
+  "intents": [
+    {
+      "name": "product_search",
+      "patterns": ["search", "find", "look for", "show me", "looking for","show"],
+      "entities": ["product", "category", "attribute"],
+      "requiredSlots": ["query"]
+    },
+    {
+      "name": "add_to_cart",
+      "patterns": ["add to cart", "add", "put in cart", "buy"],
+      "entities": ["product", "quantity", "sku"],
+      "requiredSlots": ["sku"]
+    },
+    {
+      "name": "add_to_wishlist",
+      "patterns": ["add to wishlist", "wishlist", "save", "favorite"],
+      "entities": ["product", "sku"],
+      "requiredSlots": ["sku"]
+    },
+    {
+      "name": "view_orders",
+      "patterns": ["orders", "my orders", "order history", "past orders"],
+      "entities": [],
+      "requiredSlots": []
+    },
+    {
+      "name": "track_order",
+      "patterns": ["track", "where is", "status", "order status"],
+      "entities": ["order_number"],
+      "requiredSlots": ["order_number"]
+    },
+    {
+      "name": "view_cart",
+      "patterns": ["cart", "shopping cart", "my cart", "what's in cart"],
+      "entities": [],
+      "requiredSlots": []
+    }
+  ],
+  "entities": [
+    {
+      "name": "product",
+      "type": "string",
+      "examples": ["shoes", "shirt", "laptop", "phone", "dress", "jacket"]
+    },
+    {
+      "name": "quantity",
+      "type": "number",
+      "examples": [1, 2, 5, 10]
+    },
+    {
+      "name": "attribute",
+      "type": "object",
+      "properties": {
+        "color": ["red", "blue", "black", "white", "green", "yellow"],
+        "size": ["xs", "s", "m", "l", "xl", "xxl"],
+        "material": ["cotton", "leather", "denim", "silk"]
+      }
+    }
+  ]
+}

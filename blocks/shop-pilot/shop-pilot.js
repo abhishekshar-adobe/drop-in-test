@@ -1,0 +1,316 @@
+import ShopPilot from '../../shop-pilot/src/index.js';
+
+export default async function decorate(block) {
+  // Remove all existing children
+  while (block.firstChild) {
+    block.removeChild(block.firstChild);
+  }
+  
+  // Initialize ShopPilot AI (with error handling)
+  let shopPilot = null;
+  try {
+    shopPilot = new ShopPilot();
+  } catch (error) {
+    console.warn('ShopPilot AI not available, using fallback responses:', error);
+  }
+  
+  // Create chatbot container structure
+  const chatbotHTML = `
+    <div class="chatbot-container">
+      <div class="chatbot-window">
+        <div class="chatbot-header">
+          <div class="chatbot-avatar">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+            </svg>
+          </div>
+          <div class="chatbot-info">
+            <h3>AI Assistant</h3>
+            <span class="chatbot-status">
+              <span class="status-indicator"></span>
+              Online
+            </span>
+          </div>
+        </div>
+        
+        <div class="chatbot-messages">
+          <div class="message bot-message">
+            <div class="message-avatar">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+              </svg>
+            </div>
+            <div class="message-content">
+              <div class="message-bubble">
+                <p>Hi! 👋 I'm your AI shopping assistant. How can I help you today?</p>
+              </div>
+              <span class="message-time">Just now</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="quick-replies">
+          <button class="quick-reply" data-message="Show me trending products">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+            Trending
+          </button>
+          <button class="quick-reply" data-message="I need help with my order">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Help
+          </button>
+          <button class="quick-reply" data-message="Track my order">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="3" width="15" height="13"></rect>
+              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+              <circle cx="5.5" cy="18.5" r="2.5"></circle>
+              <circle cx="18.5" cy="18.5" r="2.5"></circle>
+            </svg>
+            Track
+          </button>
+        </div>
+        
+        <div class="chatbot-input-area">
+          <div class="input-container">
+            <button class="attachment-btn" aria-label="Attach file">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+              </svg>
+            </button>
+            <input 
+              type="text" 
+              class="chatbot-input" 
+              placeholder="Type your message..."
+              aria-label="Chat message input"
+            />
+            <button class="send-btn" aria-label="Send message">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+          <div class="typing-indicator" style="display: none;">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Create the chatbot DOM structure
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = chatbotHTML;
+  
+  // Append the chatbot to the block
+  block.appendChild(wrapper.firstElementChild);
+
+  // Initialize chatbot functionality
+  initChatbot(block, shopPilot);
+}
+
+function initChatbot(block, shopPilot) {
+  const messagesContainer = block.querySelector('.chatbot-messages');
+  const input = block.querySelector('.chatbot-input');
+  const sendBtn = block.querySelector('.send-btn');
+  const quickReplies = block.querySelectorAll('.quick-reply');
+  const typingIndicator = block.querySelector('.typing-indicator');
+
+  // Focus input on load
+  setTimeout(() => {
+    input.focus();
+    scrollToBottom();
+  }, 100);
+
+  // Send message function
+  async function sendMessage(text) {
+    if (!text.trim()) return;
+
+    // Add user message
+    addMessage(text, 'user');
+    input.value = '';
+
+    // Show typing indicator
+    showTypingIndicator();
+
+    try {
+      let response;
+      
+      // Process with ShopPilot AI if available
+      if (shopPilot) {
+        response = await shopPilot.process(text);
+      } else {
+        // Fallback response
+        response = {
+          success: true,
+          message: getFallbackResponse(text),
+        };
+      }
+      
+      hideTypingIndicator();
+      
+      if (response.success) {
+        addMessage(response.message, 'bot');
+        
+        // If there's additional data (like products), handle it
+        if (response.data && response.data.length > 0) {
+          response.data.forEach((item) => {
+            if (item.type === 'product' && item.products) {
+              displayProducts(item.products);
+            }
+          });
+        }
+      } else {
+        addMessage(response.message || 'Sorry, I couldn\'t understand that. Could you rephrase?', 'bot');
+      }
+    } catch (error) {
+      hideTypingIndicator();
+      addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+      console.error('ShopPilot error:', error);
+    }
+  }
+
+  // Add message to chat
+  function addMessage(text, sender) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${sender}-message`;
+    
+    const time = new Date().toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit' 
+    });
+
+    if (sender === 'bot') {
+      messageDiv.innerHTML = `
+        <div class="message-avatar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+          </svg>
+        </div>
+        <div class="message-content">
+          <div class="message-bubble">
+            <p>${text}</p>
+          </div>
+          <span class="message-time">${time}</span>
+        </div>
+      `;
+    } else {
+      messageDiv.innerHTML = `
+        <div class="message-content">
+          <div class="message-bubble">
+            <p>${text}</p>
+          </div>
+          <span class="message-time">${time}</span>
+        </div>
+      `;
+    }
+
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+
+    // Add animation
+    messageDiv.style.opacity = '0';
+    messageDiv.style.transform = 'translateY(10px)';
+    setTimeout(() => {
+      messageDiv.style.transition = 'all 0.3s ease';
+      messageDiv.style.opacity = '1';
+      messageDiv.style.transform = 'translateY(0)';
+    }, 10);
+  }
+
+  // Fallback response generator
+  function getFallbackResponse(text) {
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('product') || lowerText.includes('shop')) {
+      return "I'd be happy to help you find products! What are you looking for? 🛍️";
+    }
+    if (lowerText.includes('order') || lowerText.includes('track')) {
+      return "I can help you track your order! Please provide your order number. 📦";
+    }
+    if (lowerText.includes('hello') || lowerText.includes('hi')) {
+      return "Hello! How can I assist you with your shopping today? 👋";
+    }
+    return "Thanks for your message! How can I help you today? 😊";
+  }
+
+  // Display products in chat
+  function displayProducts(products) {
+    if (!products || products.length === 0) return;
+    
+    const productsHTML = `
+      <div class="products-carousel">
+        ${products.slice(0, 5).map((product) => `
+          <div class="product-card">
+            ${product.image ? `<img src="${product.image}" alt="${product.name}" />` : ''}
+            <h4>${product.name}</h4>
+            ${product.price ? `<p class="price">$${product.price}</p>` : ''}
+            ${product.url ? `<a href="${product.url}" class="view-product">View Details</a>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    
+    const productDiv = document.createElement('div');
+    productDiv.className = 'message bot-message products-message';
+    productDiv.innerHTML = `
+      <div class="message-content">
+        ${productsHTML}
+      </div>
+    `;
+    
+    messagesContainer.appendChild(productDiv);
+    scrollToBottom();
+  }
+
+  // Typing indicator
+
+  // Typing indicator
+  function showTypingIndicator() {
+    typingIndicator.style.display = 'flex';
+    scrollToBottom();
+  }
+
+  function hideTypingIndicator() {
+    typingIndicator.style.display = 'none';
+  }
+
+  // Scroll to bottom
+  function scrollToBottom() {
+    setTimeout(() => {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
+  }
+
+  // Send button click
+  sendBtn.addEventListener('click', () => {
+    sendMessage(input.value);
+  });
+
+  // Enter key to send
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      sendMessage(input.value);
+    }
+  });
+
+  // Quick replies
+  quickReplies.forEach(reply => {
+    reply.addEventListener('click', () => {
+      const message = reply.dataset.message;
+      sendMessage(message);
+    });
+  });
+
+  // Auto-resize input
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = input.scrollHeight + 'px';
+  });
+}

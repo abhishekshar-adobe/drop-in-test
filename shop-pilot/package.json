@@ -1,0 +1,18 @@
+{
+  "name": "shop-pilot",
+  "version": "1.0.0",
+  "description": "AI-powered e-commerce chatbot with multi-intent NLP",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node src/index.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": ["chatbot", "nlp", "ecommerce", "ai"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "compromise": "^14.14.0",
+    "fuse.js": "^7.0.0"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "queries": [
+    {
+      "text": "search for red shoes",
+      "expectedIntent": "product_search",
+      "entities": {
+        "query": "red shoes",
+        "attributes": { "color": "red" }
+      }
+    },
+    {
+      "text": "add 2 shirts to cart",
+      "expectedIntent": "add_to_cart",
+      "entities": {
+        "product": "shirts",
+        "quantity": 2
+      }
+    },
+    {
+      "text": "how much is the laptop",
+      "expectedIntent": "check_price",
+      "entities": {
+        "product": "laptop"
+      }
+    },
+    {
+      "text": "show me my orders",
+      "expectedIntent": "view_orders",
+      "entities": {}
+    },
+    {
+      "text": "track order 12345",
+      "expectedIntent": "track_order",
+      "entities": {
+        "order_number": "12345"
+      }
+    },
+    {
+      "text": "find blue jeans size 32",
+      "expectedIntent": "product_search",
+      "entities": {
+        "query": "blue jeans",
+        "attributes": { "color": "blue", "size": "32" }
+      }
+    },
+    {
+      "text": "add to wishlist",
+      "expectedIntent": "add_to_wishlist",
+      "entities": {}
+    },
+    {
+      "text": "what's in my cart",
+      "expectedIntent": "view_cart",
+      "entities": {}
+    }
+  ]
+}

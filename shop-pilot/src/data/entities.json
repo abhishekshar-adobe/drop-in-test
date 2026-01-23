@@ -1,0 +1,63 @@
+{
+  "products": [
+    {
+      "name": "shoes",
+      "category": "footwear",
+      "synonyms": ["sneakers", "boots", "sandals", "footwear"],
+      "attributes": ["size", "color", "material"]
+    },
+    {
+      "name": "shirt",
+      "category": "clothing",
+      "synonyms": ["t-shirt", "tee", "top", "blouse"],
+      "attributes": ["size", "color", "material"]
+    },
+    {
+      "name": "pants",
+      "category": "clothing",
+      "synonyms": ["jeans", "trousers", "slacks"],
+      "attributes": ["size", "color", "material"]
+    },
+    {
+      "name": "laptop",
+      "category": "electronics",
+      "synonyms": ["computer", "notebook", "pc"],
+      "attributes": ["brand", "ram", "storage"]
+    },
+    {
+      "name": "phone",
+      "category": "electronics",
+      "synonyms": ["smartphone", "mobile", "cellphone"],
+      "attributes": ["brand", "storage", "color"]
+    },
+    {
+      "name": "watch",
+      "category": "accessories",
+      "synonyms": ["timepiece", "smartwatch", "wristwatch"],
+      "attributes": ["brand", "color", "type"]
+    },
+    {
+      "name": "bag",
+      "category": "accessories",
+      "synonyms": ["backpack", "handbag", "purse", "tote"],
+      "attributes": ["size", "color", "material"]
+    }
+  ],
+  "colors": [
+    "red", "blue", "black", "white", "green", "yellow",
+    "pink", "purple", "orange", "gray", "brown", "navy"
+  ],
+  "sizes": [
+    "xs", "s", "m", "l", "xl", "xxl",
+    "small", "medium", "large",
+    "6", "7", "8", "9", "10", "11", "12"
+  ],
+  "materials": [
+    "cotton", "leather", "denim", "silk", "wool",
+    "polyester", "nylon", "canvas"
+  ],
+  "brands": [
+    "Nike", "Adidas", "Apple", "Samsung", "Sony",
+    "Dell", "HP", "Lenovo", "Zara", "H&M"
+  ]
+}
