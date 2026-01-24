@@ -6,21 +6,90 @@ import tokenizer from '../utils/tokenizer.js';
  */
 export default class DLM {
   constructor() {
-    // E-commerce domain vocabulary
+    // E-commerce domain vocabulary (loaded from config)
     this.domainVocabulary = {
-      products: ['shoe', 'shirt', 'pants', 'jacket', 'dress', 'laptop', 'phone', 'watch', 'bag'],
-      actions: ['search', 'find', 'buy', 'add', 'remove', 'order', 'track', 'show'],
-      attributes: ['color', 'size', 'material', 'brand', 'price'],
-      modifiers: ['cheap', 'expensive', 'large', 'small', 'new', 'used']
+      products: [],
+      actions: [],
+      attributes: [],
+      modifiers: []
     };
 
-    // Common e-commerce patterns
-    this.patterns = {
-      searchPattern: /(?:search|find|look for|show me)\s+(.+)/i,
-      addToCartPattern: /(?:add|put)\s+(.+?)\s+(?:to|in)\s+cart/i,
-      pricePattern: /(?:price|cost|how much)\s+(?:is|for|of)?\s*(.+)/i,
-      quantityPattern: /(\d+)\s*(?:x\s*)?(.+)/i
-    };
+    // Canonical entity mappings (loaded from config)
+    this.canonicalMappings = {};
+    
+    // Patterns (loaded from config)
+    this.patterns = {};
+    
+    this.intentsLoaded = false;
+    this.loadIntents();
+  }
+
+  /**
+   * Load intents configuration to get canonical entity mappings
+   */
+  async loadIntents() {
+    if (this.intentsLoaded) return;
+
+    try {
+      const response = await fetch('/shop-pilot/config/intents.json');
+      const config = await response.json();
+      
+      // Extract canonical mappings from entities config
+      const attributeEntity = config.entities.find(e => e.name === 'attribute');
+      if (attributeEntity && attributeEntity.properties) {
+        this.canonicalMappings = attributeEntity.properties;
+      }
+      
+      // Load vocabulary
+      if (config.vocabulary) {
+        this.domainVocabulary = config.vocabulary;
+      }
+      
+      // Load patterns and convert strings to RegExp
+      if (config.patterns) {
+        Object.entries(config.patterns).forEach(([name, pattern]) => {
+          this.patterns[name] = new RegExp(pattern, 'i');
+        });
+      }
+      
+      this.intentsLoaded = true;
+    } catch (error) {
+      console.warn('Failed to load intents config for entity normalization:', error);
+      // Fallback to basic mappings
+      this.domainVocabulary = {
+        products: ['shoe', 'shirt', 'pants', 'jacket', 'dress'],
+        actions: ['search', 'find', 'buy', 'add', 'show'],
+        attributes: ['color', 'size', 'material'],
+        modifiers: ['cheap', 'expensive', 'large', 'small']
+      };
+      
+      this.patterns = {
+        searchPattern: /(?:search|find|look for|show me)\s+(.+)/i,
+        addToCartPattern: /(?:add|put)\s+(.+?)\s+(?:to|in)\s+cart/i,
+        pricePattern: /(?:price|cost|how much)\s+(?:is|for|of)?\s*(.+)/i,
+        quantityPattern: /(\d+)\s*(?:x\s*)?(.+)/i
+      };
+      
+      this.canonicalMappings = {
+        color: {
+          canonical: {
+            red: ['red', 'crimson'],
+            blue: ['blue', 'navy'],
+            black: ['black'],
+            white: ['white']
+          }
+        },
+        size: {
+          canonical: {
+            xs: ['xs', 'extra small'],
+            s: ['s', 'small'],
+            m: ['m', 'medium'],
+            l: ['l', 'large'],
+            xl: ['xl', 'extra large']
+          }
+        }
+      };
+    }
   }
 
   /**
@@ -29,6 +98,11 @@ export default class DLM {
    * @returns {Object} Processed output with domain-specific insights
    */
   async process(text) {
+    // Ensure intents are loaded for entity normalization
+    if (!this.intentsLoaded) {
+      await this.loadIntents();
+    }
+
     // Step 1: Tokenize and normalize
     const tokens = tokenizer.normalize(text);
 
@@ -63,8 +137,9 @@ export default class DLM {
    * Extract verbs (action words)
    */
   extractVerbs(tokens) {
-    const commonVerbs = ['search', 'find', 'add', 'remove', 'buy', 'show', 'track', 'view'];
-    return tokens.filter(t => commonVerbs.includes(t));
+    // Use loaded vocabulary instead of hardcoded list
+    const actionWords = this.domainVocabulary.actions || [];
+    return tokens.filter(t => actionWords.includes(t));
   }
 
   /**
@@ -134,18 +209,39 @@ export default class DLM {
   extractAttributes(tokens) {
     const attributes = {};
 
-    const colorWords = ['red', 'blue', 'black', 'white', 'green', 'yellow', 'pink', 'purple'];
-    const sizeWords = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'small', 'medium', 'large'];
-
+    // Use canonical mappings for normalization
     tokens.forEach(token => {
-      if (colorWords.includes(token)) {
-        attributes.color = token;
-      }
-      if (sizeWords.includes(token)) {
-        attributes.size = token;
-      }
+      // Try to normalize each attribute type
+      Object.entries(this.canonicalMappings).forEach(([attrType, config]) => {
+        const canonical = this.normalizeEntity(token, attrType);
+        if (canonical) {
+          attributes[attrType] = canonical;
+        }
+      });
     });
 
     return attributes;
+  }
+
+  /**
+   * Normalize entity value to canonical form
+   * @param {string} value - Raw entity value
+   * @param {string} type - Entity type (color, size, material)
+   * @returns {string|null} Canonical value or null
+   */
+  normalizeEntity(value, type) {
+    const mapping = this.canonicalMappings[type];
+    if (!mapping || !mapping.canonical) return null;
+
+    const lowerValue = value.toLowerCase();
+
+    // Find canonical form
+    for (const [canonical, synonyms] of Object.entries(mapping.canonical)) {
+      if (synonyms.includes(lowerValue)) {
+        return canonical;
+      }
+    }
+
+    return null;
   }
 }

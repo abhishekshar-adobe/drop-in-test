@@ -1,40 +1,72 @@
 {
+  "vocabulary": {
+    "products": ["shoe", "shirt", "pants", "jacket", "dress", "laptop", "phone", "watch", "bag", "sweater", "hoodie", "jeans", "sneaker", "boot"],
+    "actions": ["search", "find", "buy", "add", "remove", "order", "track", "show", "view", "check", "get", "purchase"],
+    "attributes": ["color", "size", "material", "brand", "price", "style", "fit"],
+    "modifiers": ["cheap", "expensive", "large", "small", "new", "used", "premium", "budget", "quality"]
+  },
+  "patterns": {
+    "searchPattern": "(?:search|find|look for|show me)\\s+(.+)",
+    "addToCartPattern": "(?:add|put)\\s+(.+?)\\s+(?:to|in)\\s+cart",
+    "pricePattern": "(?:price|cost|how much)\\s+(?:is|for|of)?\\s*(.+)",
+    "quantityPattern": "(\\d+)\\s*(?:x\\s*)?(.+)"
+  },
   "intents": [
     {
       "name": "product_search",
       "patterns": ["search", "find", "look for", "show me", "looking for","show"],
       "entities": ["product", "category", "attribute"],
-      "requiredSlots": ["query"]
+      "requiredSlots": ["query"],
+      "priority": 0.7,
+      "confidenceThreshold": 0.3
     },
     {
       "name": "add_to_cart",
       "patterns": ["add to cart", "add", "put in cart", "buy"],
       "entities": ["product", "quantity", "sku"],
-      "requiredSlots": ["sku"]
+      "requiredSlots": ["sku"],
+      "priority": 0.9,
+      "confidenceThreshold": 0.75
     },
     {
       "name": "add_to_wishlist",
       "patterns": ["add to wishlist", "wishlist", "save", "favorite"],
       "entities": ["product", "sku"],
-      "requiredSlots": ["sku"]
+      "requiredSlots": ["sku"],
+      "priority": 0.85,
+      "confidenceThreshold": 0.7
+    },
+    {
+      "name": "check_price",
+      "patterns": ["price", "cost", "how much", "price of"],
+      "entities": ["product", "sku"],
+      "requiredSlots": ["product"],
+      "priority": 0.6,
+      "confidenceThreshold": 0.5
     },
     {
       "name": "view_orders",
-      "patterns": ["orders", "my orders", "order history", "past orders"],
+      "patterns": ["orders", "my orders", "order history", "past orders", "show orders", "view orders", "order","recent orders"],
       "entities": [],
-      "requiredSlots": []
+      "requiredSlots": [],
+      "priority": 0.8,
+      "confidenceThreshold": 0.6
     },
     {
       "name": "track_order",
-      "patterns": ["track", "where is", "status", "order status"],
+      "patterns": ["track", "where is", "status", "order status", "track order", "order tracking"],
       "entities": ["order_number"],
-      "requiredSlots": ["order_number"]
+      "requiredSlots": ["order_number"],
+      "priority": 0.85,
+      "confidenceThreshold": 0.65
     },
     {
       "name": "view_cart",
       "patterns": ["cart", "shopping cart", "my cart", "what's in cart"],
       "entities": [],
-      "requiredSlots": []
+      "requiredSlots": [],
+      "priority": 0.8,
+      "confidenceThreshold": 0.55
     }
   ],
   "entities": [
@@ -52,9 +84,40 @@
       "name": "attribute",
       "type": "object",
       "properties": {
-        "color": ["red", "blue", "black", "white", "green", "yellow"],
-        "size": ["xs", "s", "m", "l", "xl", "xxl"],
-        "material": ["cotton", "leather", "denim", "silk"]
+        "color": {
+          "canonical": {
+            "red": ["red", "crimson", "scarlet"],
+            "blue": ["blue", "navy", "azure", "blu"],
+            "black": ["black", "blck"],
+            "white": ["white", "wht"],
+            "green": ["green", "grn"],
+            "yellow": ["yellow", "ylw"],
+            "pink": ["pink", "pnk"],
+            "purple": ["purple", "violet"],
+            "gray": ["gray", "grey", "silver"],
+            "brown": ["brown", "tan", "beige"]
+          }
+        },
+        "size": {
+          "canonical": {
+            "xs": ["xs", "extra small", "xsmall", "x-small"],
+            "s": ["s", "small", "sm"],
+            "m": ["m", "medium", "meduim", "med"],
+            "l": ["l", "large", "larg", "lrg"],
+            "xl": ["xl", "extra large", "xlarge", "x-large"],
+            "xxl": ["xxl", "2xl", "double xl", "extra extra large"]
+          }
+        },
+        "material": {
+          "canonical": {
+            "cotton": ["cotton", "coton"],
+            "leather": ["leather", "leathr"],
+            "denim": ["denim", "jean", "jeans"],
+            "silk": ["silk", "slk"],
+            "polyester": ["polyester", "poly"],
+            "wool": ["wool", "woolen"]
+          }
+        }
       }
     }
   ]

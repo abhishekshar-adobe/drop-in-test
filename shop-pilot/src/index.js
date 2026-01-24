@@ -55,6 +55,23 @@ export default class ShopPilot {
         return clarificationResponse;
       }
 
+      // Step 4.5: Validate required slots and trigger clarification if needed
+      const slotValidation = this.validateSlots(scoredIntents);
+      if (slotValidation.needsClarification) {
+        // Store pending action and trigger product search first
+        this.conversationContext.pendingAction = slotValidation.pendingIntent;
+        const searchIntent = slotValidation.clarificationIntent;
+        const results = await this.executor.execute([searchIntent]);
+        this.conversationContext.lastSearchResults = results[0]?.data;
+        
+        return {
+          success: true,
+          message: results[0]?.message + '\n\n💡 ' + slotValidation.message,
+          data: results[0]?.data,
+          needsSelection: true
+        };
+      }
+
       // Step 5: Execute actions
       const results = await this.executor.execute(scoredIntents);
       this.logger.info('Action results:', results);
@@ -85,6 +102,59 @@ export default class ShopPilot {
     
     const topIntent = scoredIntents[0];
     return topIntent.confidence < config.thresholds.clarificationNeeded;
+  }
+
+  /**
+   * Validate if required slots are present for each intent
+   */
+  validateSlots(scoredIntents) {
+    for (const intent of scoredIntents) {
+      // Check add_to_cart which requires SKU
+      if (intent.name === 'add_to_cart' || intent.name === 'add_to_wishlist') {
+        if (!intent.entities.sku) {
+          // Missing SKU - need to search for products first
+          const searchQuery = this.buildSearchQuery(intent.entities);
+          return {
+            needsClarification: true,
+            pendingIntent: intent,
+            clarificationIntent: {
+              name: 'product_search',
+              entities: {
+                query: searchQuery,
+                attributes: intent.entities.attributes || {}
+              },
+              confidenceLevel: 'high'
+            },
+            message: `Which product would you like to add? Please select from the results above.`
+          };
+        }
+      }
+      
+      // Check track_order which requires order_number
+      if (intent.name === 'track_order' && !intent.entities.order_number) {
+        return {
+          needsClarification: true,
+          pendingIntent: intent,
+          message: `📝 What's your order number?`
+        };
+      }
+    }
+    
+    return { needsClarification: false };
+  }
+
+  /**
+   * Build search query from entity attributes
+   */
+  buildSearchQuery(entities) {
+    const parts = [];
+    if (entities.attributes) {
+      if (entities.attributes.color) parts.push(entities.attributes.color);
+      if (entities.attributes.size) parts.push(entities.attributes.size);
+      if (entities.attributes.material) parts.push(entities.attributes.material);
+    }
+    if (entities.product) parts.push(entities.product);
+    return parts.join(' ') || 'products';
   }
 
   /**
@@ -121,7 +191,9 @@ export default class ShopPilot {
       history: [],
       currentIntent: null,
       awaitingClarification: false,
-      lastProducts: []
+      pendingAction: null,
+      lastProducts: [],
+      lastSearchResults: null
     };
   }
 }

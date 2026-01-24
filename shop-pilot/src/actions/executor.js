@@ -19,9 +19,19 @@ export default class ActionExecutor {
   async execute(scoredIntents) {
     const results = [];
 
+    // Safety check for undefined or empty array
+    if (!scoredIntents || !Array.isArray(scoredIntents)) {
+      return results;
+    }
+
     for (const intent of scoredIntents) {
-      // Only execute high confidence intents
-      if (intent.confidenceLevel !== 'high') {
+      // Skip undefined intents
+      if (!intent || !intent.name) {
+        continue;
+      }
+
+      // Only execute high confidence intents (or those marked as high in clarification flow)
+      if (intent.confidenceLevel && intent.confidenceLevel !== 'high') {
         continue;
       }
 
@@ -98,21 +108,41 @@ export default class ActionExecutor {
   }
 
   async handleAddToCart(entities) {
-    const result = await this.api.addToCart(entities.product, entities.quantity);
+    // Validate SKU is present
+    if (!entities.sku) {
+      return {
+        success: false,
+        intent: 'add_to_cart',
+        message: `❌ Cannot add to cart without product SKU. Please search for the product first.`,
+        requiresSearch: true
+      };
+    }
+    
+    const result = await this.api.addToCart(entities.sku, entities.quantity);
     return {
       success: true,
       intent: 'add_to_cart',
-      message: `✅ Added ${entities.quantity}x ${entities.product} to cart`,
+      message: `✅ Added ${entities.quantity}x ${entities.product || 'product'} to cart`,
       data: result
     };
   }
 
   async handleAddToWishlist(entities) {
-    const result = await this.api.addToWishlist(entities.product);
+    // Validate SKU is present
+    if (!entities.sku) {
+      return {
+        success: false,
+        intent: 'add_to_wishlist',
+        message: `❌ Cannot add to wishlist without product SKU. Please search for the product first.`,
+        requiresSearch: true
+      };
+    }
+    
+    const result = await this.api.addToWishlist(entities.sku);
     return {
       success: true,
       intent: 'add_to_wishlist',
-      message: `❤️ Added ${entities.product} to wishlist`,
+      message: `❤️ Added ${entities.product || 'product'} to wishlist`,
       data: result
     };
   }

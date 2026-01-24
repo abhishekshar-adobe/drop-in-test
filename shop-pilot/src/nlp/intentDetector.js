@@ -50,20 +50,29 @@ export default class IntentDetector {
     // Check each intent definition
     this.intents.forEach((intentDef) => {
       const score = this.scoreIntent(intentDef, dlmOutput);
+      const threshold = intentDef.confidenceThreshold || 0.3;
       
-      // Only include intents with meaningful scores
-      if (score >= 0.3) {
+      // Only include intents that meet their specific confidence threshold
+      if (score >= threshold) {
         detectedIntents.push({
           name: intentDef.name,
           rawScore: score,
+          priority: intentDef.priority || 0.5,
           entities: this.extractEntitiesForIntent(intentDef, dlmOutput),
           requiredSlots: intentDef.requiredSlots,
         });
       }
     });
 
-    // Sort by score and filter intelligently
-    const sorted = detectedIntents.sort((a, b) => b.rawScore - a.rawScore);
+    // Sort by priority first, then by score
+    const sorted = detectedIntents.sort((a, b) => {
+      // If priorities are different, use priority
+      if (Math.abs(a.priority - b.priority) > 0.1) {
+        return b.priority - a.priority;
+      }
+      // If priorities are similar, use score
+      return b.rawScore - a.rawScore;
+    });
     
     if (sorted.length === 0) {
       return [];
@@ -103,7 +112,11 @@ export default class IntentDetector {
       ).length;
 
       const matchRatio = matchCount / patternWords.length;
-      if (matchRatio > 0) {
+      
+      // Require stricter matching for multi-word patterns
+      const minMatchRatio = patternWords.length > 1 ? 0.7 : 0.5;
+      
+      if (matchRatio >= minMatchRatio) {
         score += matchRatio * 2;
         hasPatternMatch = true;
       }
@@ -128,19 +141,52 @@ export default class IntentDetector {
   extractEntitiesForIntent(intentDef, dlmOutput) {
     const entities = {};
 
+    // Extract normalized attributes (color, size, material)
+    const normalizedAttributes = dlmOutput.attributes || {};
+
     if (intentDef.name === 'product_search') {
-      entities.query = dlmOutput.entities.products.join(' ') || 
-                       dlmOutput.nouns.join(' ') || 
+      // Build query from products and nouns
+      const queryParts = [];
+      
+      // Add normalized attributes to query
+      if (normalizedAttributes.color) queryParts.push(normalizedAttributes.color);
+      if (normalizedAttributes.size) queryParts.push(normalizedAttributes.size);
+      if (normalizedAttributes.material) queryParts.push(normalizedAttributes.material);
+      
+      // Add products/nouns
+      if (dlmOutput.entities.products.length > 0) {
+        queryParts.push(...dlmOutput.entities.products);
+      } else if (dlmOutput.nouns.length > 0) {
+        queryParts.push(...dlmOutput.nouns);
+      }
+      
+      entities.query = queryParts.join(' ') || 
                        dlmOutput.tokens.filter(t => !dlmOutput.verbs.includes(t)).join(' ');
-      entities.attributes = dlmOutput.attributes;
+      entities.attributes = normalizedAttributes;
+      
     } else if (intentDef.name === 'add_to_cart') {
       entities.product = dlmOutput.entities.products[0];
       entities.quantity = dlmOutput.numbers[0] || 1;
+      entities.attributes = normalizedAttributes;
       entities.sku = null; // Will be resolved later
+      
+    } else if (intentDef.name === 'add_to_wishlist') {
+      entities.product = dlmOutput.entities.products[0];
+      entities.attributes = normalizedAttributes;
+      entities.sku = null; // Will be resolved later
+      
     } else if (intentDef.name === 'check_price') {
       entities.product = dlmOutput.entities.products[0] || dlmOutput.nouns[0];
+      entities.attributes = normalizedAttributes;
+      
     } else if (intentDef.name === 'track_order') {
       entities.order_number = dlmOutput.numbers[0];
+      
+    } else if (intentDef.name === 'view_orders') {
+      // No entities needed for view_orders
+      
+    } else if (intentDef.name === 'view_cart') {
+      // No entities needed for view_cart
     }
 
     return entities;
