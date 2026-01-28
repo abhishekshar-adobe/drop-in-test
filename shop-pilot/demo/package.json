@@ -1,0 +1,10 @@
+{
+  "name": "product-list-demo",
+  "version": "1.0.0",
+  "description": "Demo server for product list component",
+  "type": "module",
+  "scripts": {
+    "demo": "npx serve . -p 3001",
+    "demo:open": "npx serve . -p 3001 && open http://localhost:3001/demo/product-list-demo.html"
+  }
+}

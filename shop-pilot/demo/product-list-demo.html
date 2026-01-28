@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product List Demo - Shop Pilot</title>
+  <link rel="stylesheet" href="../src/components/product-list.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .demo-header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+    
+    .demo-header h1 {
+      font-size: 36px;
+      margin-bottom: 8px;
+    }
+    
+    .demo-header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    
+    .demo-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+    
+    .demo-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 2px solid #e0e0e0;
+      flex-wrap: wrap;
+    }
+    
+    .demo-controls button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .demo-controls button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .demo-controls .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .demo-controls .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+    }
+    
+    .selected-product {
+      margin-top: 24px;
+      padding: 16px;
+      background: #e8f4f8;
+      border-left: 4px solid #0066cc;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .selected-product.visible {
+      display: block;
+    }
+    
+    .selected-product h3 {
+      color: #0066cc;
+      margin-bottom: 8px;
+    }
+    
+    .selected-product pre {
+      background: white;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <div class="demo-header">
+      <h1>🛍️ Product List Component</h1>
+      <p>Lightweight, reusable product display for Shop Pilot</p>
+    </div>
+    
+    <div class="demo-content">
+      <div class="demo-controls">
+        <button class="btn-primary" onclick="loadRealProducts()">Load Real Products</button>
+        <button class="btn-secondary" onclick="loadMockProducts()">Load Mock Products</button>
+        <button class="btn-secondary" onclick="loadEmptyState()">Empty State</button>
+        <button class="btn-secondary" onclick="clearProducts()">Clear</button>
+      </div>
+      
+      <div id="product-list-container"></div>
+      
+      <div id="selected-product" class="selected-product">
+        <h3>Selected Product:</h3>
+        <pre id="selected-product-data"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import ProductList from '../src/components/ProductList.js';
+    import EcommerceAPI from '../src/actions/ecommerceApi.js';
+    
+    // Initialize product list
+    const container = document.getElementById('product-list-container');
+    const productList = new ProductList(container, {
+      layout: 'grid',
+      onSelect: (product, index) => {
+        console.log('Product selected:', product, 'at index', index);
+        
+        // Show selected product
+        const selectedDiv = document.getElementById('selected-product');
+        const selectedData = document.getElementById('selected-product-data');
+        selectedDiv.classList.add('visible');
+        selectedData.textContent = JSON.stringify(product, null, 2);
+        
+        // Scroll to selected
+        selectedDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+    
+    // Load mock products
+    window.loadMockProducts = () => {
+      const mockProducts = [
+        {
+          sku: 'MOCK-001',
+          name: 'Classic Blue Cotton Shirt',
+          price: 29.99,
+          currency: 'USD',
+          inStock: true,
+          image: null,
+          type: 'SimpleProductView'
+        },
+        {
+          sku: 'MOCK-002',
+          name: 'Navy Blue Dress Shirt Premium Collection',
+          price: 49.99,
+          currency: 'USD',
+          inStock: true,
+          image: null,
+          type: 'ComplexProductView'
+        },
+        {
+          sku: 'MOCK-003',
+          name: 'Sky Blue Polo Shirt',
+          price: 34.99,
+          currency: 'USD',
+          inStock: false,
+          image: null,
+          type: 'SimpleProductView'
+        },
+        {
+          sku: 'MOCK-004',
+          name: 'White Oxford Shirt',
+          price: 39.99,
+          currency: 'USD',
+          inStock: true,
+          image: null,
+          type: 'SimpleProductView'
+        },
+        {
+          sku: 'MOCK-005',
+          name: 'Black Formal Shirt',
+          price: 44.99,
+          currency: 'USD',
+          inStock: true,
+          image: null,
+          type: 'SimpleProductView'
+        },
+        {
+          sku: 'MOCK-006',
+          name: 'Red Casual Shirt',
+          price: 27.99,
+          currency: 'USD',
+          inStock: true,
+          image: null,
+          type: 'SimpleProductView'
+        }
+      ];
+      
+      const pageInfo = {
+        current_page: 1,
+        page_size: 12,
+        total_pages: 1,
+        total_count: mockProducts.length
+      };
+      
+      productList.render(mockProducts, pageInfo);
+    };
+    
+    // Load real products from API
+    window.loadRealProducts = async () => {
+      try {
+        const api = new EcommerceAPI();
+        const result = await api.searchProducts('shirt');
+        
+        productList.render(result.items, result.pageInfo);
+      } catch (error) {
+        console.error('Failed to load real products:', error);
+        alert('Failed to load products. Loading mock data instead.');
+        window.loadMockProducts();
+      }
+    };
+    
+    // Load empty state
+    window.loadEmptyState = () => {
+      productList.render([]);
+    };
+    
+    // Clear products
+    window.clearProducts = () => {
+      productList.destroy();
+    };
+    
+    // Load mock products on init
+    window.loadMockProducts();
+  </script>
+</body>
+</html>

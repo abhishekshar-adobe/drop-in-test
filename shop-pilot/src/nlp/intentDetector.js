@@ -13,8 +13,25 @@ export default class IntentDetector {
    */
   async loadIntents() {
     try {
-      const response = await fetch('/shop-pilot/config/intents.json');
-      const intentsConfig = await response.json();
+      let intentsConfig;
+      
+      // Check if we're in Node.js or browser environment
+      if (typeof window === 'undefined') {
+        // Node.js environment - use fs
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const url = await import('url');
+        
+        const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+        const configPath = path.resolve(__dirname, '../../config/intents.json');
+        const data = await fs.readFile(configPath, 'utf-8');
+        intentsConfig = JSON.parse(data);
+      } else {
+        // Browser environment - use fetch
+        const response = await fetch('/shop-pilot/config/intents.json');
+        intentsConfig = await response.json();
+      }
+      
       this.intents = intentsConfig.intents;
     } catch (error) {
       console.error('Failed to load intents config:', error);
@@ -81,8 +98,27 @@ export default class IntentDetector {
     // Always include top intent
     const topIntent = sorted[0];
     
-    // Only include second intent if it's at least 60% as strong as the top
-    // This prevents weak secondary intents from being triggered
+    // Define intent exclusion rules: specific intents block generic ones
+    const specificIntents = ['view_cart', 'view_orders', 'track_order', 'add_to_wishlist', 'add_to_cart', 'check_price'];
+    const genericIntents = ['product_search'];
+    
+    // If top intent is specific, don't include generic product_search
+    if (specificIntents.includes(topIntent.name)) {
+      // Filter out generic intents from secondary results
+      const filteredSorted = sorted.filter(intent => 
+        intent === topIntent || !genericIntents.includes(intent.name)
+      );
+      
+      if (filteredSorted.length > 1) {
+        const secondIntent = filteredSorted[1];
+        if (secondIntent.rawScore >= topIntent.rawScore * 0.6) {
+          return [topIntent, secondIntent];
+        }
+      }
+      return [topIntent];
+    }
+    
+    // For generic intents as top, allow secondary if strong enough
     if (sorted.length > 1) {
       const secondIntent = sorted[1];
       if (secondIntent.rawScore >= topIntent.rawScore * 0.6) {
@@ -168,12 +204,12 @@ export default class IntentDetector {
       entities.product = dlmOutput.entities.products[0];
       entities.quantity = dlmOutput.numbers[0] || 1;
       entities.attributes = normalizedAttributes;
-      entities.sku = null; // Will be resolved later
+      entities.sku = dlmOutput.entities.sku || null; // Extract SKU from DLM
       
     } else if (intentDef.name === 'add_to_wishlist') {
       entities.product = dlmOutput.entities.products[0];
       entities.attributes = normalizedAttributes;
-      entities.sku = null; // Will be resolved later
+      entities.sku = dlmOutput.entities.sku || null; // Extract SKU from DLM
       
     } else if (intentDef.name === 'check_price') {
       entities.product = dlmOutput.entities.products[0] || dlmOutput.nouns[0];

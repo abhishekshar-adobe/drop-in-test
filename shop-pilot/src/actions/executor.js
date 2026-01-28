@@ -102,8 +102,9 @@ export default class ActionExecutor {
     return {
       success: true,
       intent: 'product_search',
-      message: `🔍 Found ${results.total} products matching "${entities.query}"`,
-      data: results
+      message: '', // No text message, show UI only
+      data: results,
+      displayAs: 'ui' // Flag to render as UI component
     };
   }
 
@@ -118,13 +119,34 @@ export default class ActionExecutor {
       };
     }
     
-    const result = await this.api.addToCart(entities.sku, entities.quantity);
-    return {
-      success: true,
-      intent: 'add_to_cart',
-      message: `✅ Added ${entities.quantity}x ${entities.product || 'product'} to cart`,
-      data: result
-    };
+    try {
+      const result = await this.api.addToCart(
+        entities.sku, 
+        entities.quantity || 1,
+        {
+          parentSku: entities.parentSku,
+          optionsUIDs: entities.optionsUIDs,
+          enteredOptions: entities.enteredOptions
+        }
+      );
+      
+      const itemCount = result?.items?.length || entities.quantity || 1;
+      const productName = entities.product || entities.sku;
+      
+      return {
+        success: true,
+        intent: 'add_to_cart',
+        message: `✅ Added ${entities.quantity || 1}x ${productName} to cart`,
+        data: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        intent: 'add_to_cart',
+        message: `❌ Failed to add product to cart: ${error.message}`,
+        error: error.message
+      };
+    }
   }
 
   async handleAddToWishlist(entities) {
@@ -138,13 +160,32 @@ export default class ActionExecutor {
       };
     }
     
-    const result = await this.api.addToWishlist(entities.sku);
-    return {
-      success: true,
-      intent: 'add_to_wishlist',
-      message: `❤️ Added ${entities.product || 'product'} to wishlist`,
-      data: result
-    };
+    try {
+      const result = await this.api.addToWishlist(
+        entities.sku,
+        entities.quantity || 1,
+        {
+          optionsUIDs: entities.optionsUIDs,
+          enteredOptions: entities.enteredOptions
+        }
+      );
+      
+      const productName = entities.product || entities.sku;
+      
+      return {
+        success: true,
+        intent: 'add_to_wishlist',
+        message: `❤️ Added ${entities.quantity || 1}x ${productName} to wishlist`,
+        data: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        intent: 'add_to_wishlist',
+        message: `❌ Failed to add product to wishlist: ${error.message}`,
+        error: error.message
+      };
+    }
   }
 
   async handleCheckPrice(entities) {

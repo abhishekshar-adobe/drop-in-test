@@ -168,11 +168,18 @@ export default class ShopPilot {
       };
     }
 
-    const messages = results.map(r => r.message).join('\n\n');
+    // Filter out empty messages and join
+    const messages = results
+      .map(r => r.message)
+      .filter(msg => msg && msg.trim())
+      .join('\n\n');
+    
     return {
       success: true,
       message: messages,
-      data: results
+      data: results,
+      action: results[0]?.intent, // Pass the action type for UI rendering
+      displayAs: results[0]?.displayAs // Pass display mode
     };
   }
 

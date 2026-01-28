@@ -31,8 +31,24 @@ export default class DLM {
     if (this.intentsLoaded) return;
 
     try {
-      const response = await fetch('/shop-pilot/config/intents.json');
-      const config = await response.json();
+      let config;
+      
+      // Check if we're in Node.js or browser environment
+      if (typeof window === 'undefined') {
+        // Node.js environment - use fs
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const url = await import('url');
+        
+        const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+        const configPath = path.resolve(__dirname, '../../config/intents.json');
+        const data = await fs.readFile(configPath, 'utf-8');
+        config = JSON.parse(data);
+      } else {
+        // Browser environment - use fetch
+        const response = await fetch('/shop-pilot/config/intents.json');
+        config = await response.json();
+      }
       
       // Extract canonical mappings from entities config
       const attributeEntity = config.entities.find(e => e.name === 'attribute');
@@ -152,10 +168,15 @@ export default class DLM {
   }
 
   /**
-   * Extract numbers
+   * Extract numbers (excluding numbers within SKUs)
    */
   extractNumbers(text) {
-    const matches = text.match(/\d+/g);
+    // First, remove SKU patterns to avoid extracting digits from them
+    const skuPattern = /\b[A-Z]{3,4}\d{3,4}\b/gi;
+    const textWithoutSkus = text.replace(skuPattern, '');
+    
+    // Now extract standalone numbers
+    const matches = textWithoutSkus.match(/\b\d+\b/g);
     return matches ? matches.map(Number) : [];
   }
 
@@ -167,7 +188,8 @@ export default class DLM {
       products: [],
       attributes: {},
       quantities: [],
-      actions: []
+      actions: [],
+      sku: null
     };
 
     // Extract products
@@ -177,6 +199,10 @@ export default class DLM {
       }
       if (this.domainVocabulary.actions.includes(token)) {
         entities.actions.push(token);
+      }
+      // Check if token looks like a SKU (alphanumeric, often starts with letters)
+      if (/^[A-Z]{3,4}\d{3,4}$/i.test(token)) {
+        entities.sku = token.toUpperCase();
       }
     });
 
