@@ -1,3 +1,6 @@
+/* Import component styles */
+@import '../../shop-pilot/src/components/OrderListUI.css';
+
 .shop-pilot .chatbot-container {
   width: 100%;
   margin: 0;
@@ -520,4 +523,174 @@
   
   .chatbot-window {
     height: calc(100vh - 40px);
-    border-radius: 12
+    border-radius: 12px;
+  }
+}
+
+/* Product List UI Component Styles */
+.shop-pilot .product-list-container {
+  margin: 8px 0;
+}
+
+.shop-pilot .product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.shop-pilot .product-item {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+
+.shop-pilot .product-number {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.shop-pilot .product-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.shop-pilot .product-item.unavailable {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.shop-pilot .product-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.shop-pilot .product-image-placeholder {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  font-size: 48px;
+}
+
+.shop-pilot .product-info {
+  padding: 12px;
+}
+
+.shop-pilot .product-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: #333;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+}
+
+.shop-pilot .product-sku {
+  font-size: 11px;
+  color: #999;
+  margin: 0 0 8px 0;
+  font-family: monospace;
+}
+
+.shop-pilot .product-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shop-pilot .product-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.shop-pilot .out-of-stock {
+  font-size: 10px;
+  color: #ff4444;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.shop-pilot .product-list-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.shop-pilot .empty-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.shop-pilot .product-list-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.shop-pilot .products-ui-message .message-content {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* Order List Container */
+.shop-pilot .order-list-container {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.shop-pilot .orders-ui-message {
+  max-width: 90%;
+}
+
+.shop-pilot .orders-ui-message .message-content {
+  padding: 0;
+}
+
+@media (max-width: 480px) {
+  .shop-pilot .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .shop-pilot .product-image,
+  .shop-pilot .product-image-placeholder {
+    height: 140px;
+  }
+  
+  .shop-pilot .product-name {
+    font-size: 13px;
+  }
+  
+  .shop-pilot .product-price {
+    font-size: 14px;
+  }
+}

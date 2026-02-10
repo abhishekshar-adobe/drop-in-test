@@ -1,4 +1,6 @@
 import ShopPilot from '../../shop-pilot/src/index.js';
+import ProductListUI from '../../shop-pilot/src/components/ProductListUI.js';
+import OrderListUI from '../../shop-pilot/src/components/OrderListUI.js';
 
 export default async function decorate(block) {
   // Remove all existing children
@@ -122,6 +124,9 @@ function initChatbot(block, shopPilot) {
   const sendBtn = block.querySelector('.send-btn');
   const quickReplies = block.querySelectorAll('.quick-reply');
   const typingIndicator = block.querySelector('.typing-indicator');
+  
+  // Store current product list for number-based selection
+  let currentProducts = [];
 
   // Focus input on load
   setTimeout(() => {
@@ -132,6 +137,17 @@ function initChatbot(block, shopPilot) {
   // Send message function
   async function sendMessage(text) {
     if (!text.trim()) return;
+
+    // Check if message contains a number reference to a product
+    const numberMatch = text.match(/\b(\d+)\b/);
+    if (numberMatch && currentProducts.length > 0) {
+      const productIndex = parseInt(numberMatch[1]) - 1;
+      if (productIndex >= 0 && productIndex < currentProducts.length) {
+        const product = currentProducts[productIndex];
+        // Replace number with SKU in the message
+        text = text.replace(numberMatch[1], product.sku);
+      }
+    }
 
     // Add user message
     addMessage(text, 'user');
@@ -146,6 +162,7 @@ function initChatbot(block, shopPilot) {
       // Process with ShopPilot AI if available
       if (shopPilot) {
         response = await shopPilot.process(text);
+        console.log('[ShopPilot] Response received:', response);
       } else {
         // Fallback response
         response = {
@@ -156,11 +173,29 @@ function initChatbot(block, shopPilot) {
       
       hideTypingIndicator();
       
+      console.log('[ShopPilot] Processing response - success:', response.success, 'displayAs:', response.displayAs, 'intent:', response.intent, 'action:', response.action);
+      
       if (response.success) {
-        addMessage(response.message, 'bot');
+        // Check if response should be displayed as UI component
+        if (response.displayAs === 'ui' && (response.intent === 'product_search' || response.action === 'product_search')) {
+          // Render product list UI
+          const products = response.data?.items || response.data[0]?.data?.items || [];
+          renderProductListUI(products);
+        } else if (response.displayAs === 'ui' && (response.intent === 'view_orders' || response.action === 'view_orders')) {
+          // Render order list UI
+          console.log('[ShopPilot] Rendering order list UI with data:', response.data);
+          console.log('[ShopPilot] First order details:', response.data?.[0]);
+          const orders = response.data || [];
+          renderOrderListUI(orders);
+        } else if (response.message) {
+          // Show text message
+          console.log('[ShopPilot] Showing text message:', response.message);
+          addMessage(response.message, 'bot');
+        }
         
         // If there's additional data (like products), handle it
-        if (response.data && response.data.length > 0) {
+        // Skip this if we already rendered a UI component
+        if (response.displayAs !== 'ui' && response.data && response.data.length > 0) {
           response.data.forEach((item) => {
             if (item.type === 'product' && item.products) {
               displayProducts(item.products);
@@ -238,6 +273,66 @@ function initChatbot(block, shopPilot) {
       return "Hello! How can I assist you with your shopping today? 👋";
     }
     return "Thanks for your message! How can I help you today? 😊";
+  }
+
+  // Render ProductListUI component
+  function renderProductListUI(products) {
+    // Store products for number-based selection
+    currentProducts = products;
+    
+    const container = document.createElement('div');
+    container.className = 'product-list-container';
+    
+    ProductListUI.render(container, products, (product, index) => {
+      // Handle product selection - trigger add to cart
+      sendMessage(`add ${product.sku} to cart`);
+    });
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message products-ui-message';
+    messageDiv.innerHTML = `
+      <div class="message-content">
+      </div>
+    `;
+    messageDiv.querySelector('.message-content').appendChild(container);
+    
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    
+    // Add helper message
+    setTimeout(() => {
+      addMessage('💡 Tip: You can say "add 1 to cart" or "add 3 to wishlist" to select a product by number.', 'bot');
+    }, 500);
+  }
+
+  // Render OrderListUI component
+  function renderOrderListUI(orders) {
+    console.log('[ShopPilot] renderOrderListUI called with orders:', orders);
+    
+    const container = document.createElement('div');
+    container.className = 'order-list-container';
+    
+    OrderListUI.render(container, orders);
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message orders-ui-message';
+    messageDiv.innerHTML = `
+      <div class="message-content">
+      </div>
+    `;
+    messageDiv.querySelector('.message-content').appendChild(container);
+    
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    
+    console.log('[ShopPilot] Order list UI rendered');
+    
+    // Add count message if there are orders
+    if (orders.length > 0) {
+      setTimeout(() => {
+        addMessage(`📦 You have ${orders.length} order${orders.length !== 1 ? 's' : ''}`, 'bot');
+      }, 300);
+    }
   }
 
   // Display products in chat
