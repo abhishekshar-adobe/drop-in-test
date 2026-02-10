@@ -174,6 +174,11 @@ export default class ShopPilot {
       .filter(msg => msg && msg.trim())
       .join('\n\n');
     
+    // If first result is UI display, return it directly without wrapping
+    if (results[0]?.displayAs === 'ui') {
+      return results[0];
+    }
+    
     return {
       success: true,
       message: messages,

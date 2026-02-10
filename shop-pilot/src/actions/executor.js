@@ -1,5 +1,6 @@
 import EcommerceAPI from './ecommerceApi.js';
 import Logger from '../utils/logger.js';
+import OrderListUI from '../components/OrderListUI.js';
 
 /**
  * Action Executor
@@ -203,8 +204,10 @@ export default class ActionExecutor {
     return {
       success: true,
       intent: 'view_orders',
-      message: `📦 You have ${orders.length} orders`,
-      data: orders
+      displayAs: 'ui',
+      message: orders.length > 0 ? '' : 'You have no orders yet',
+      data: orders,
+      ui: OrderListUI
     };
   }
 
