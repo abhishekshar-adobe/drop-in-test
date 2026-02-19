@@ -80,6 +80,9 @@ export default class ActionExecutor {
       case 'view_cart':
         return await this.handleViewCart();
       
+      case 'place_order':
+        return await this.handlePlaceOrder(intent.entities);
+      
       default:
         return {
           success: false,
@@ -229,5 +232,46 @@ export default class ActionExecutor {
       message: `🛒 You have ${cart.itemCount} items in your cart`,
       data: cart
     };
+  }
+
+  async handlePlaceOrder(entities) {
+    try {
+      // Get the current cart ID from the cart API
+      const cartId = await this.api.getCartId();
+      
+      if (!cartId) {
+        return {
+          success: false,
+          intent: 'place_order',
+          message: `❌ No active cart found. Please add items to cart first.`,
+          requiresCart: true
+        };
+      }
+      
+      const result = await this.api.placeOrder(cartId);
+      
+      if (!result) {
+        return {
+          success: false,
+          intent: 'place_order',
+          message: `❌ Failed to place order`,
+          error: 'No order data returned'
+        };
+      }
+      
+      return {
+        success: true,
+        intent: 'place_order',
+        message: `✅ Order placed successfully! Order number: ${result.number || result.id}`,
+        data: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        intent: 'place_order',
+        message: `❌ Failed to place order: ${error.message}`,
+        error: error.message
+      };
+    }
   }
 }

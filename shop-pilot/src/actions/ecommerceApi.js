@@ -373,4 +373,44 @@ export default class EcommerceAPI {
       throw error;
     }
   }
+
+  /**
+   * Get cart ID from the storefront-cart dropin
+   * @returns {Promise<string | null>} The cart ID or null if no cart exists
+   */
+  async getCartId() {
+    try {
+      console.log('[API] Getting cart ID');
+      
+      // Import the cart dropin to access cart state
+      const cartModule = await import('../../../scripts/__dropins__/storefront-cart/chunks/resetCart.js');
+      const cartId = cartModule.s.cartId;
+      
+      console.log('[API] Cart ID:', cartId);
+      return cartId;
+    } catch (error) {
+      console.error('[API] Get cart ID failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Place order using storefront-order dropin
+   * @param {string} cartId - The cart ID to place order for
+   * @returns {Promise<OrderDataModel | null | undefined>}
+   */
+  async placeOrder(cartId) {
+    try {
+      console.log(`[API] Placing order for cart: ${cartId}`);
+      
+      const orderApi = await import('../../../scripts/__dropins__/storefront-order/api.js');
+      const result = await orderApi.placeOrder(cartId);
+      
+      console.log('[API] Place order result:', result);
+      return result;
+    } catch (error) {
+      console.error('[API] Place order failed:', error);
+      throw error;
+    }
+  }
 }

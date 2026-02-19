@@ -67,6 +67,14 @@
       "requiredSlots": [],
       "priority": 0.8,
       "confidenceThreshold": 0.55
+    },
+    {
+      "name": "place_order",
+      "patterns": ["place order", "checkout", "complete order", "finish order", "confirm order", "complete purchase"],
+      "entities": [],
+      "requiredSlots": [],
+      "priority": 0.95,
+      "confidenceThreshold": 0.8
     }
   ],
   "entities": [
