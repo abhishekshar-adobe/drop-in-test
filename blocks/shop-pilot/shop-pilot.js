@@ -176,17 +176,32 @@ function initChatbot(block, shopPilot) {
       console.log('[ShopPilot] Processing response - success:', response.success, 'displayAs:', response.displayAs, 'intent:', response.intent, 'action:', response.action);
       
       if (response.success) {
+        // Show processing steps if multi-intent query
+        if (response.processingSteps && response.processingSteps.length > 1) {
+          displayProcessingSteps(response.processingSteps);
+        }
+        
         // Check if response should be displayed as UI component
         if (response.displayAs === 'ui' && (response.intent === 'product_search' || response.action === 'product_search')) {
           // Render product list UI
           const products = response.data?.items || response.data[0]?.data?.items || [];
           renderProductListUI(products);
+          
+          // If there's a message (e.g., from auto-completed action), show it
+          if (response.message) {
+            addMessage(response.message, 'bot');
+          }
         } else if (response.displayAs === 'ui' && (response.intent === 'view_orders' || response.action === 'view_orders')) {
           // Render order list UI
           console.log('[ShopPilot] Rendering order list UI with data:', response.data);
           console.log('[ShopPilot] First order details:', response.data?.[0]);
           const orders = response.data || [];
           renderOrderListUI(orders);
+          
+          // If there's a message, show it
+          if (response.message) {
+            addMessage(response.message, 'bot');
+          }
         } else if (response.message) {
           // Show text message
           console.log('[ShopPilot] Showing text message:', response.message);
@@ -333,6 +348,32 @@ function initChatbot(block, shopPilot) {
         addMessage(`📦 You have ${orders.length} order${orders.length !== 1 ? 's' : ''}`, 'bot');
       }, 300);
     }
+  }
+
+  // Display processing steps for multi-intent queries
+  function displayProcessingSteps(steps) {
+    const stepsHTML = steps.map(step => 
+      `<div class="processing-step">
+        <span class="step-number">${step.step}</span>
+        <span class="step-action">${step.action}</span>
+      </div>`
+    ).join('');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message processing-steps-message';
+    messageDiv.innerHTML = `
+      <div class="message-content">
+        <div class="message-bubble">
+          <div class="processing-steps-header">🔄 Processing your request:</div>
+          <div class="processing-steps-list">
+            ${stepsHTML}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
   }
 
   // Display products in chat

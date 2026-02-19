@@ -48,6 +48,14 @@ export default class ShopPilot {
       const scoredIntents = this.confidenceScorer.score(intents);
       this.logger.debug('Scored intents:', scoredIntents);
 
+      // Build processing steps for UI display (multi-intent)
+      const processingSteps = scoredIntents.map((intent, index) => ({
+        step: index + 1,
+        action: this.getIntentDisplayName(intent.name),
+        intent: intent.name,
+        entities: intent.entities
+      }));
+
       // Step 4: Check if clarification needed
       if (this.needsClarification(scoredIntents)) {
         const clarificationResponse = this.clarification.generate(scoredIntents);
@@ -60,14 +68,67 @@ export default class ShopPilot {
       if (slotValidation.needsClarification) {
         // Store pending action and trigger product search first
         this.conversationContext.pendingAction = slotValidation.pendingIntent;
-        const searchIntent = slotValidation.clarificationIntent;
-        const results = await this.executor.execute([searchIntent]);
-        this.conversationContext.lastSearchResults = results[0]?.data;
         
+        // If there's a clarification intent (like product_search), execute it
+        if (slotValidation.clarificationIntent) {
+          const searchIntent = slotValidation.clarificationIntent;
+          const results = await this.executor.execute([searchIntent]);
+          this.conversationContext.lastSearchResults = results[0]?.data;
+          
+          // Check if user specified a product number in the original query
+          const pendingIntent = slotValidation.pendingIntent;
+          const productNumber = pendingIntent.entities.quantity;
+          
+          // If quantity is 1-5 and matches a product position, auto-select it
+          if (productNumber >= 1 && productNumber <= 5 && results[0]?.data?.items) {
+            const items = results[0].data.items;
+            if (productNumber <= items.length) {
+              const selectedProduct = items[productNumber - 1];
+              
+              // Update pending intent with the selected product SKU
+              pendingIntent.entities.sku = selectedProduct.sku;
+              pendingIntent.entities.product = selectedProduct.name;
+              pendingIntent.entities.quantity = 1; // Reset quantity to 1 (was product number)
+              pendingIntent.confidenceLevel = 'high';
+              
+              // Execute the pending action immediately
+              const actionResults = await this.executor.execute([pendingIntent]);
+              
+              // Build response with search results + action result
+              const searchMessage = results[0]?.message || '';
+              const actionMessage = actionResults[0]?.message || '';
+              
+              return {
+                success: true,
+                intent: results[0]?.intent || searchIntent.name,
+                message: `${searchMessage}\n\n${actionMessage}`,
+                data: results[0]?.data,
+                displayAs: results[0]?.displayAs || 'text',
+                processingSteps: processingSteps,
+                autoCompleted: true
+              };
+            }
+          }
+          
+          // Build response with search results + clarification message
+          const searchMessage = results[0]?.message || '';
+          const clarificationMsg = slotValidation.message;
+          
+          return {
+            success: true,
+            intent: results[0]?.intent || searchIntent.name, // Include intent for frontend routing
+            message: searchMessage ? `${searchMessage}\n\n💡 ${clarificationMsg}` : `💡 ${clarificationMsg}`,
+            data: results[0]?.data,
+            displayAs: results[0]?.displayAs || 'text',
+            needsSelection: true,
+            processingSteps: processingSteps // Include processing steps
+          };
+        }
+        
+        // No clarification intent, just return the message
         return {
           success: true,
-          message: results[0]?.message + '\n\n💡 ' + slotValidation.message,
-          data: results[0]?.data,
+          message: slotValidation.message,
           needsSelection: true
         };
       }
@@ -83,7 +144,14 @@ export default class ShopPilot {
         results
       });
 
-      return this.formatResponse(results);
+      const response = this.formatResponse(results);
+      
+      // Add processing steps if multiple intents
+      if (processingSteps.length > 1) {
+        response.processingSteps = processingSteps;
+      }
+      
+      return response;
     } catch (error) {
       this.logger.error('Processing error:', error);
       return {
@@ -193,6 +261,23 @@ export default class ShopPilot {
    */
   getContext() {
     return this.conversationContext;
+  }
+
+  /**
+   * Get display name for intent
+   */
+  getIntentDisplayName(intentName) {
+    const displayNames = {
+      'product_search': 'Search for products',
+      'add_to_cart': 'Add to cart',
+      'add_to_wishlist': 'Add to wishlist',
+      'check_price': 'Check price',
+      'view_orders': 'View orders',
+      'track_order': 'Track order',
+      'view_cart': 'View cart',
+      'place_order': 'Place order'
+    };
+    return displayNames[intentName] || intentName;
   }
 
   /**

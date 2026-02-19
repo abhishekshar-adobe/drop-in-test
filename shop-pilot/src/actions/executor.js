@@ -106,7 +106,7 @@ export default class ActionExecutor {
     return {
       success: true,
       intent: 'product_search',
-      message: '', // No text message, show UI only
+      message: `🔍 Found ${results.total} product${results.total > 1 ? 's' : ''} matching "${entities.query}"`,
       data: results,
       displayAs: 'ui' // Flag to render as UI component
     };
