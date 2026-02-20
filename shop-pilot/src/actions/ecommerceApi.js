@@ -413,4 +413,61 @@ export default class EcommerceAPI {
       throw error;
     }
   }
+
+  /**
+   * Cancel order using storefront-order dropin
+   * @param {string} orderId - The order ID to cancel
+   * @param {string} reason - Cancellation reason
+   * @param {Function} onSuccess - Success callback
+   * @param {Function} onError - Error callback
+   * @returns {Promise<void | null | undefined>}
+   */
+  async cancelOrder(orderId, reason, onSuccess, onError) {
+    try {
+      console.log(`[API] Cancelling order: ${orderId}, reason: ${reason}`);
+      
+      const orderApi = await import('../../../scripts/__dropins__/storefront-order/api.js');
+      
+      // The cancelOrder API may have different signatures, check the actual implementation
+      // This is based on the typical pattern in Adobe Commerce dropins
+      const result = await orderApi.cancelOrder(orderId, reason, onSuccess, onError);
+      
+      console.log('[API] Cancel order result:', result);
+      return result;
+    } catch (error) {
+      console.error('[API] Cancel order failed:', error);
+      if (onError) {
+        onError(error);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Request return for order using storefront-order dropin
+   * @param {string} orderId - The order ID to return
+   * @param {string} reason - Return reason
+   * @param {Function} onSuccess - Success callback
+   * @param {Function} onError - Error callback
+   * @returns {Promise<void | null | undefined>}
+   */
+  async requestReturn(orderId, reason, onSuccess, onError) {
+    try {
+      console.log(`[API] Requesting return for order: ${orderId}, reason: ${reason}`);
+      
+      const orderApi = await import('../../../scripts/__dropins__/storefront-order/api.js');
+      
+      // Use requestReturn API from the storefront-order dropin
+      const result = await orderApi.requestReturn(orderId, reason, onSuccess, onError);
+      
+      console.log('[API] Request return result:', result);
+      return result;
+    } catch (error) {
+      console.error('[API] Request return failed:', error);
+      if (onError) {
+        onError(error);
+      }
+      throw error;
+    }
+  }
 }

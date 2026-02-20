@@ -203,8 +203,59 @@ export default class ShopPilot {
         return {
           needsClarification: true,
           pendingIntent: intent,
-          message: `📝 What's your order number?`
+          clarificationIntent: {
+            name: 'view_orders',
+            entities: {},
+            confidenceLevel: 'high'
+          },
+          message: `📝 Which order would you like to track? Please provide the order number from above.`
         };
+      }
+      
+      // Check cancel_order which requires order_number and reason
+      if (intent.name === 'cancel_order') {
+        if (!intent.entities.order_number) {
+          return {
+            needsClarification: true,
+            pendingIntent: intent,
+            clarificationIntent: {
+              name: 'view_orders',
+              entities: {},
+              confidenceLevel: 'high'
+            },
+            message: `📝 Which order would you like to cancel? Please select an order number from above.`
+          };
+        }
+        if (!intent.entities.reason) {
+          return {
+            needsClarification: true,
+            pendingIntent: intent,
+            message: `📝 Please provide a reason for cancelling order #${intent.entities.order_number}.`
+          };
+        }
+      }
+      
+      // Check return_order which requires order_number and reason
+      if (intent.name === 'return_order') {
+        if (!intent.entities.order_number) {
+          return {
+            needsClarification: true,
+            pendingIntent: intent,
+            clarificationIntent: {
+              name: 'view_orders',
+              entities: {},
+              confidenceLevel: 'high'
+            },
+            message: `📝 Which order would you like to return? Please select an order number from above.`
+          };
+        }
+        if (!intent.entities.reason) {
+          return {
+            needsClarification: true,
+            pendingIntent: intent,
+            message: `📝 Please provide a reason for returning order #${intent.entities.order_number}.`
+          };
+        }
       }
     }
     
@@ -275,7 +326,9 @@ export default class ShopPilot {
       'view_orders': 'View orders',
       'track_order': 'Track order',
       'view_cart': 'View cart',
-      'place_order': 'Place order'
+      'place_order': 'Place order',
+      'cancel_order': 'Cancel order',
+      'return_order': 'Request return'
     };
     return displayNames[intentName] || intentName;
   }

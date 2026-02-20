@@ -143,6 +143,7 @@ export default class DLM {
       verbs,
       nouns,
       numbers,
+      orderId: this.extractOrderId(text),
       attributes: this.extractAttributes(tokens)
     };
 
@@ -175,9 +176,41 @@ export default class DLM {
     const skuPattern = /\b[A-Z]{3,4}\d{3,4}\b/gi;
     const textWithoutSkus = text.replace(skuPattern, '');
     
-    // Now extract standalone numbers
-    const matches = textWithoutSkus.match(/\b\d+\b/g);
-    return matches ? matches.map(Number) : [];
+    // Extract standalone numbers including those with leading zeros (like order numbers)
+    // Match numbers that are 1+ digits, including those with leading zeros
+    const matches = textWithoutSkus.match(/\b0*\d+\b/g);
+    
+    // Return as strings to preserve leading zeros for order numbers, or as numbers for quantities
+    if (!matches) return [];
+    
+    // Keep as strings if they look like order numbers (6+ digits or have leading zeros)
+    return matches.map(m => {
+      // If it has leading zeros or is a long number (likely an order number), keep as string
+      if (m.length >= 6 || m.startsWith('0')) {
+        return m;
+      }
+      // Otherwise convert to number (for quantities)
+      return Number(m);
+    });
+  }
+
+  /**
+   * Extract order ID (can be numeric or base64 encoded)
+   */
+  extractOrderId(text) {
+    // Pattern 1: Any alphanumeric string after "order" keyword (highest priority)
+    const orderMatch = text.match(/order\s+([A-Za-z0-9+=\/-]+)/i);
+    if (orderMatch && orderMatch[1]) return orderMatch[1];
+    
+    // Pattern 2: Pure numeric order IDs (with or without leading zeros)
+    const numericMatch = text.match(/\b0*\d{6,}\b/);
+    if (numericMatch) return numericMatch[0];
+    
+    // Pattern 3: Base64 encoded IDs (must end with = or ==, more strict)
+    const base64Match = text.match(/\b[A-Za-z0-9+\/]{8,}={1,2}\b/);
+    if (base64Match) return base64Match[0];
+    
+    return null;
   }
 
   /**

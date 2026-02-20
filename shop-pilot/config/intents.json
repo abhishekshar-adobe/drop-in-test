@@ -75,6 +75,22 @@
       "requiredSlots": [],
       "priority": 0.95,
       "confidenceThreshold": 0.8
+    },
+    {
+      "name": "cancel_order",
+      "patterns": ["cancel order", "cancel my order", "cancel", "stop order", "abort order"],
+      "entities": ["order_number", "reason"],
+      "requiredSlots": ["order_number", "reason"],
+      "priority": 0.9,
+      "confidenceThreshold": 0.75
+    },
+    {
+      "name": "return_order",
+      "patterns": ["return order", "return", "request return", "initiate return", "send back"],
+      "entities": ["order_number", "reason"],
+      "requiredSlots": ["order_number", "reason"],
+      "priority": 0.9,
+      "confidenceThreshold": 0.75
     }
   ],
   "entities": [

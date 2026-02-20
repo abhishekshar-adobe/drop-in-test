@@ -45,11 +45,23 @@
   gap: 12px;
 }
 
+.order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
 .order-number {
   font-weight: 600;
   font-size: 15px;
   color: #1a1a1a;
-  flex: 1;
+}
+
+.order-id {
+  font-size: 12px;
+  color: #888;
+  font-family: 'Courier New', monospace;
 }
 
 .order-date {

@@ -83,6 +83,12 @@ export default class ActionExecutor {
       case 'place_order':
         return await this.handlePlaceOrder(intent.entities);
       
+      case 'cancel_order':
+        return await this.handleCancelOrder(intent.entities);
+      
+      case 'return_order':
+        return await this.handleReturnOrder(intent.entities);
+      
       default:
         return {
           success: false,
@@ -271,6 +277,106 @@ export default class ActionExecutor {
         intent: 'place_order',
         message: `❌ Failed to place order: ${error.message}`,
         error: error.message
+      };
+    }
+  }
+
+  async handleCancelOrder(entities) {
+    const { order_number, reason } = entities;
+    
+    if (!order_number) {
+      return {
+        success: false,
+        intent: 'cancel_order',
+        message: '❌ Order number is required to cancel an order.'
+      };
+    }
+
+    if (!reason) {
+      return {
+        success: false,
+        intent: 'cancel_order',
+        message: '❌ Cancellation reason is required.'
+      };
+    }
+
+    try {
+      
+      // Call the cancelOrder API
+      const result = await this.api.cancelOrder(
+        order_number,
+        reason,
+        (orderData) => {
+          // Success callback
+          this.logger.info('Order cancelled successfully:', orderData);
+        },
+        (error) => {
+          // Error callback
+          this.logger.error('Order cancellation failed:', error);
+        }
+      );
+
+      return {
+        success: true,
+        intent: 'cancel_order',
+        message: `✅ Order #${order_number} has been cancelled successfully.`,
+        data: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        intent: 'cancel_order',
+        message: `❌ Failed to cancel order: ${error.message}`
+      };
+    }
+  }
+
+  async handleReturnOrder(entities) {
+    const { order_number, reason } = entities;
+    
+    if (!order_number) {
+      return {
+        success: false,
+        intent: 'return_order',
+        message: '❌ Order number is required to initiate a return.'
+      };
+    }
+
+    if (!reason) {
+      return {
+        success: false,
+        intent: 'return_order',
+        message: '❌ Return reason is required.'
+      };
+    }
+
+    try {
+      
+      // Call the requestReturn API
+      const result = await this.api.requestReturn(
+        order_number,
+        reason,
+        (returnData) => {
+          // Success callback
+          this.logger.info('Return requested successfully:', returnData);
+        },
+        (error) => {
+          // Error callback
+          this.logger.error('Return request failed:', error);
+        }
+      );
+
+      return {
+        success: true,
+        intent: 'return_order',
+        message: `✅ Return request for order #${order_number} has been initiated successfully. You will receive confirmation shortly.`,
+        data: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        intent: 'return_order',
+        message: `❌ Failed to request return: ${error.message}`
       };
     }
   }

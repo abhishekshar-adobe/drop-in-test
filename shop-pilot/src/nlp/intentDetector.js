@@ -216,7 +216,53 @@ export default class IntentDetector {
       entities.attributes = normalizedAttributes;
       
     } else if (intentDef.name === 'track_order') {
-      entities.order_number = dlmOutput.numbers[0];
+      entities.order_number = dlmOutput.orderId || dlmOutput.numbers[0];
+      
+    } else if (intentDef.name === 'cancel_order') {
+      // Extract order number - try orderId first, then fall back to numbers
+      entities.order_number = dlmOutput.orderId || dlmOutput.numbers[0];
+      
+      // Extract reason - check for explicit "reason" keyword first
+      const text = dlmOutput.originalText;
+      let reasonText = null;
+      
+      // Pattern 1: Explicit "reason" keyword (e.g., "reason other")
+      const reasonMatch = text.match(/reason\s+(.+)/i);
+      if (reasonMatch) {
+        reasonText = reasonMatch[1].trim();
+      } else {
+        // Pattern 2: Extract from remaining text after order number
+        const orderNum = entities.order_number;
+        reasonText = text
+          .replace(/cancel|order|my/gi, '')
+          .replace(orderNum || '', '')
+          .trim();
+      }
+      
+      entities.reason = reasonText || null;
+      
+    } else if (intentDef.name === 'return_order') {
+      // Extract order number - try orderId first, then fall back to numbers
+      entities.order_number = dlmOutput.orderId || dlmOutput.numbers[0];
+      
+      // Extract reason - check for explicit "reason" keyword first
+      const text = dlmOutput.originalText;
+      let reasonText = null;
+      
+      // Pattern 1: Explicit "reason" keyword (e.g., "reason defective")
+      const reasonMatch = text.match(/reason\s+(.+)/i);
+      if (reasonMatch) {
+        reasonText = reasonMatch[1].trim();
+      } else {
+        // Pattern 2: Extract from remaining text after order number
+        const orderNum = entities.order_number;
+        reasonText = text
+          .replace(/return|order|my/gi, '')
+          .replace(orderNum || '', '')
+          .trim();
+      }
+      
+      entities.reason = reasonText || null;
       
     } else if (intentDef.name === 'view_orders') {
       // No entities needed for view_orders

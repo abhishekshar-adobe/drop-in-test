@@ -59,15 +59,25 @@ export default class OrderListUI {
     const header = document.createElement('div');
     header.className = 'order-header';
     
+    const orderInfo = document.createElement('div');
+    orderInfo.className = 'order-info';
+    
     const orderNumber = document.createElement('div');
     orderNumber.className = 'order-number';
     orderNumber.textContent = `Order #${order.number}`;
+    
+    const orderId = document.createElement('div');
+    orderId.className = 'order-id';
+    orderId.textContent = `ID: ${order.id}`;
+    
+    orderInfo.appendChild(orderNumber);
+    orderInfo.appendChild(orderId);
     
     const orderDate = document.createElement('div');
     orderDate.className = 'order-date';
     orderDate.textContent = this.formatDate(order.order_date);
     
-    header.appendChild(orderNumber);
+    header.appendChild(orderInfo);
     header.appendChild(orderDate);
 
     // Order status
