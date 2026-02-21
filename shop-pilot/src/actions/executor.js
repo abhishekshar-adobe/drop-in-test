@@ -1,6 +1,8 @@
 import EcommerceAPI from './ecommerceApi.js';
 import Logger from '../utils/logger.js';
 import OrderListUI from '../components/OrderListUI.js';
+import { detectMetric, extractTimeRange, buildAnalyticsRequest, executeAggregation, formatAnalyticsResult } from '../utils/analytics.js';
+import { formatNaturalResponse, shouldFormatNaturally } from '../utils/responseFormatter.js';
 
 /**
  * Action Executor
@@ -58,44 +60,70 @@ export default class ActionExecutor {
   async executeIntent(intent) {
     this.logger.info(`Executing intent: ${intent.name}`);
 
+    let result;
+    
     switch (intent.name) {
       case 'product_search':
-        return await this.handleProductSearch(intent.entities);
+        result = await this.handleProductSearch(intent.entities);
+        break;
       
       case 'add_to_cart':
-        return await this.handleAddToCart(intent.entities);
+        result = await this.handleAddToCart(intent.entities);
+        break;
       
       case 'add_to_wishlist':
-        return await this.handleAddToWishlist(intent.entities);
+        result = await this.handleAddToWishlist(intent.entities);
+        break;
       
       case 'check_price':
-        return await this.handleCheckPrice(intent.entities);
+        result = await this.handleCheckPrice(intent.entities);
+        break;
       
       case 'view_orders':
-        return await this.handleViewOrders();
+        result = await this.handleViewOrders();
+        break;
       
       case 'track_order':
-        return await this.handleTrackOrder(intent.entities);
+        result = await this.handleTrackOrder(intent.entities);
+        break;
       
       case 'view_cart':
-        return await this.handleViewCart();
+        result = await this.handleViewCart();
+        break;
       
       case 'place_order':
-        return await this.handlePlaceOrder(intent.entities);
+        result = await this.handlePlaceOrder(intent.entities);
+        break;
       
       case 'cancel_order':
-        return await this.handleCancelOrder(intent.entities);
+        result = await this.handleCancelOrder(intent.entities);
+        break;
       
       case 'return_order':
-        return await this.handleReturnOrder(intent.entities);
+        result = await this.handleReturnOrder(intent.entities);
+        break;
+      
+      case 'analytics_query':
+        result = await this.handleAnalyticsQuery(intent.entities, intent.text);
+        break;
       
       default:
-        return {
+        result = {
           success: false,
           intent: intent.name,
           message: `❌ Unknown intent: ${intent.name}`
         };
     }
+    
+    // Apply natural language formatting for text responses
+    if (shouldFormatNaturally(result)) {
+      const naturalMessage = formatNaturalResponse(intent.name, result);
+      if (naturalMessage) {
+        result.message = naturalMessage;
+      }
+    }
+    
+    return result;
   }
 
   async handleProductSearch(entities) {
@@ -377,6 +405,71 @@ export default class ActionExecutor {
         success: false,
         intent: 'return_order',
         message: `❌ Failed to request return: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Handle analytics query
+   */
+  async handleAnalyticsQuery(entities, text) {
+    try {
+      // Step 1: Detect metric from text
+      const metricInfo = detectMetric(text);
+      
+      // Step 2: Extract time range from text
+      const timeRange = extractTimeRange(text);
+      
+      // Step 3: Build structured analytics request
+      const request = buildAnalyticsRequest({
+        text,
+        metric: metricInfo.metric,
+        field: metricInfo.field,
+        product: entities.product,
+        category: entities.category,
+        brand: entities.brand,
+        timeRange
+      });
+      
+      // Step 4: Fetch order data
+      const orders = await this.api.getOrders();
+      
+      if (!orders || orders.length === 0) {
+        return {
+          success: false,
+          intent: 'analytics_query',
+          message: '📊 No order data available for analytics.'
+        };
+      }
+      
+      // Step 5: Execute aggregation
+      const result = executeAggregation(request, orders);
+      
+      // Step 6: Format result
+      const message = formatAnalyticsResult(request, result);
+      
+      // Determine display mode
+      let displayAs = 'text';
+      if (request.metric === 'list' || request.metric === 'top') {
+        displayAs = 'ui';
+      }
+      
+      return {
+        success: true,
+        intent: 'analytics_query',
+        message,
+        displayAs,
+        data: {
+          request,
+          result,
+          orders: result.orders || []
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        intent: 'analytics_query',
+        message: `❌ Analytics query failed: ${error.message}`
       };
     }
   }

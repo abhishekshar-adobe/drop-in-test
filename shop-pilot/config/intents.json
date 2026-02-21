@@ -46,7 +46,7 @@
     },
     {
       "name": "view_orders",
-      "patterns": ["orders", "my orders", "order history", "past orders", "show orders", "view orders", "order","recent orders"],
+      "patterns": ["my orders", "order history", "past orders", "show orders", "view orders", "recent orders", "list orders", "all orders"],
       "entities": [],
       "requiredSlots": [],
       "priority": 0.8,
@@ -91,6 +91,14 @@
       "requiredSlots": ["order_number", "reason"],
       "priority": 0.9,
       "confidenceThreshold": 0.75
+    },
+    {
+      "name": "analytics_query",
+      "patterns": ["how much", "how many", "total amount", "total spend", "total cost", "average", "count", "sum", "stats", "statistics", "analytics", "spent", "spend"],
+      "entities": ["product", "category", "brand", "time_range", "metric"],
+      "requiredSlots": [],
+      "priority": 0.9,
+      "confidenceThreshold": 0.6
     }
   ],
   "entities": [

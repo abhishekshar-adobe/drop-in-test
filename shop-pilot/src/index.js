@@ -43,6 +43,11 @@ export default class ShopPilot {
       // Step 2: Multi-intent detection
       const intents = this.intentDetector.detect(dlmOutput);
       this.logger.debug('Detected intents:', intents);
+      
+      // Add original text to each intent for analytics queries
+      intents.forEach(intent => {
+        intent.text = userInput;
+      });
 
       // Step 3: Confidence scoring
       const scoredIntents = this.confidenceScorer.score(intents);
@@ -328,7 +333,8 @@ export default class ShopPilot {
       'view_cart': 'View cart',
       'place_order': 'Place order',
       'cancel_order': 'Cancel order',
-      'return_order': 'Request return'
+      'return_order': 'Request return',
+      'analytics_query': 'Analytics'
     };
     return displayNames[intentName] || intentName;
   }

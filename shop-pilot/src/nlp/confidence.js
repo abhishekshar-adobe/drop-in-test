@@ -20,9 +20,11 @@ export default class ConfidenceScorer {
         confidence *= 0.7; // Reduce confidence if slots missing
       }
 
-      // Factor 2: Entity quality
-      const entityQuality = this.assessEntityQuality(intent.entities);
-      confidence *= entityQuality;
+      // Factor 2: Entity quality - only penalize if there are required slots
+      if (intent.requiredSlots && intent.requiredSlots.length > 0) {
+        const entityQuality = this.assessEntityQuality(intent.entities);
+        confidence *= entityQuality;
+      }
 
       // Factor 3: Normalize to 0-1 range
       confidence = Math.min(Math.max(confidence, 0), 1);

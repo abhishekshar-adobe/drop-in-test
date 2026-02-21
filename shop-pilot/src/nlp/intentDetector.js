@@ -269,6 +269,18 @@ export default class IntentDetector {
       
     } else if (intentDef.name === 'view_cart') {
       // No entities needed for view_cart
+      
+    } else if (intentDef.name === 'analytics_query') {
+      // Extract analytics entities
+      entities.product = dlmOutput.entities.products[0] || null;
+      entities.category = dlmOutput.entities.categories?.[0] || null;
+      entities.brand = dlmOutput.entities.brands?.[0] || null;
+      
+      // time_range will be extracted by analytics utils
+      entities.time_range = null;
+      
+      // metric will be detected by analytics utils
+      entities.metric = null;
     }
 
     return entities;
