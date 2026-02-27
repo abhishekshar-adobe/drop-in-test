@@ -158,7 +158,7 @@ Scored Intents Array          ← Compatible with ConfidenceScorer output format
 ```
 
 **Prompt engineering (`src/llm/prompts.js`):**
-- `INPUT_SYSTEM_PROMPT`: Detailed schema of all 11 intents, entity types, canonical attribute values, output JSON format
+- `INPUT_SYSTEM_PROMPT`: Detailed schema of all 12 intents, entity types, canonical attribute values, output JSON format
 - `INPUT_FEW_SHOT_EXAMPLES`: 5 user/assistant pairs covering search, cart, returns, analytics, typo handling
 - `buildInputMessages()`: Assembles system prompt + few-shot + last 3 conversation turns + current user message
 
@@ -319,6 +319,7 @@ Maps intents to handler functions. Only executes intents with `confidenceLevel =
 | `cancel_order` | `handleCancelOrder` | `cancelOrder()` | Text |
 | `return_order` | `handleReturnOrder` | `returnOrder()` | Text |
 | `analytics_query` | `handleAnalyticsQuery` | Analytics utils | Text/UI |
+| `reset_cart` | `handleResetCart` | `resetCart()` via storefront-cart dropin | Text |
 
 After execution, the **Natural Response Formatter** is applied to text results (skipped for `displayAs: 'ui'`).
 
@@ -339,6 +340,7 @@ Auth:     x-api-key header
 - `graphqlRequest(query, variables)` — Generic GraphQL POST with cache-busting
 - `searchProducts(query, attributes)` — Product search with dynamic filters (color, size, material)
 - `addToCart(sku, qty, options)` — Uses storefront-cart dropin (`@aem/storefront-cart`)
+- `resetCart()` — Clears/empties cart via storefront-cart dropin
 - `addToWishlist(sku, qty, options)` — Uses storefront-wishlist dropin
 - `getOrders()` / `trackOrder()` / `cancelOrder()` / `returnOrder()` — Order management
 - `placeOrder(cartId)` — Checkout flow
@@ -460,7 +462,7 @@ Each intent defines:
 }
 ```
 
-**11 intents supported:** `product_search`, `add_to_cart`, `add_to_wishlist`, `check_price`, `view_orders`, `track_order`, `view_cart`, `place_order`, `cancel_order`, `return_order`, `analytics_query`
+**12 intents supported:** `product_search`, `add_to_cart`, `add_to_wishlist`, `check_price`, `view_orders`, `track_order`, `view_cart`, `place_order`, `cancel_order`, `return_order`, `analytics_query`, `reset_cart`
 
 ---
 

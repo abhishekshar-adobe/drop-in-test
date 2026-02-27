@@ -28,6 +28,7 @@ Given a user message, output **only** a JSON object (no markdown, no explanation
 | cancel_order       | Cancel an order                                | order_number, reason            |
 | return_order       | Request a return                               | order_number, reason            |
 | analytics_query    | Ask about spending, order stats                | (product, time_range optional)  |
+| reset_cart         | Clear / empty / reset shopping cart            | (none)                          |
 
 ## Entity Reference
 - **product**: product name/type (shoes, laptop, jacket, etc.)
@@ -331,7 +332,8 @@ function summarizeActionResult(intent, result) {
         return `Order number: ${orderNum}`;
       }
       case 'cancel_order':
-      case 'return_order': {
+      case 'return_order':
+      case 'reset_cart': {
         return result.message || 'Action completed.';
       }
       case 'analytics_query': {

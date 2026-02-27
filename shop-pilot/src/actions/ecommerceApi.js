@@ -357,6 +357,25 @@ export default class EcommerceAPI {
   }
 
   /**
+   * Reset (clear/empty) cart using storefront-cart dropin
+   * @returns {Promise<CartModel | null>}
+   */
+  async resetCart() {
+    try {
+      console.log('[API] Resetting cart');
+      
+      const cartApi = await import('../../../scripts/__dropins__/storefront-cart/api.js');
+      const result = await cartApi.resetCart();
+      
+      console.log('[API] Reset cart result:', result);
+      return result;
+    } catch (error) {
+      console.error('[API] Reset cart failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get cart
    */
   async getCart() {

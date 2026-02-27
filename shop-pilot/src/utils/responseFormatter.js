@@ -109,6 +109,20 @@ const RESPONSE_TEMPLATES = {
     ]
   },
   
+  reset_cart: {
+    success: [
+      "🗑️ Your cart has been cleared!",
+      "🗑️ Done! Your cart is now empty.",
+      "🗑️ All items removed from your cart.",
+      "🗑️ Cart cleared! Ready for a fresh start."
+    ],
+    error: [
+      "❌ I couldn't clear your cart. {reason}",
+      "❌ Oops! There was an issue clearing your cart: {reason}",
+      "❌ Sorry, cart reset failed: {reason}"
+    ]
+  },
+  
   analytics_query: {
     sum: [
       "📊 You spent {amount} on {filters} {timeRange}",

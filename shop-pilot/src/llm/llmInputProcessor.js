@@ -120,6 +120,7 @@ export default class LLMInputProcessor {
       'cancel_order',
       'return_order',
       'analytics_query',
+      'reset_cart',
     ]);
 
     const REQUIRED_SLOTS = {
@@ -134,6 +135,7 @@ export default class LLMInputProcessor {
       cancel_order: ['order_number', 'reason'],
       return_order: ['order_number', 'reason'],
       analytics_query: [],
+      reset_cart: [],
     };
 
     return parsed.intents
@@ -224,6 +226,7 @@ export default class LLMInputProcessor {
       cancel_order: 0.9,
       return_order: 0.9,
       analytics_query: 0.9,
+      reset_cart: 0.85,
     };
     return priorities[name] ?? 0.5;
   }

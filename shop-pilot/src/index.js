@@ -395,7 +395,8 @@ export default class ShopPilot {
       'place_order': 'Place order',
       'cancel_order': 'Cancel order',
       'return_order': 'Request return',
-      'analytics_query': 'Analytics'
+      'analytics_query': 'Analytics',
+      'reset_cart': 'Clear cart'
     };
     return displayNames[intentName] || intentName;
   }

@@ -1,7 +1,7 @@
 {
   "vocabulary": {
     "products": ["shoe", "shirt", "pants", "jacket", "dress", "laptop", "phone", "watch", "bag", "sweater", "hoodie", "jeans", "sneaker", "boot"],
-    "actions": ["search", "find", "buy", "add", "remove", "order", "track", "show", "view", "check", "get", "purchase"],
+    "actions": ["search", "find", "buy", "add", "remove", "order", "track", "show", "view", "check", "get", "purchase", "reset", "clear", "empty"],
     "attributes": ["color", "size", "material", "brand", "price", "style", "fit"],
     "modifiers": ["cheap", "expensive", "large", "small", "new", "used", "premium", "budget", "quality"]
   },
@@ -99,6 +99,14 @@
       "requiredSlots": [],
       "priority": 0.9,
       "confidenceThreshold": 0.6
+    },
+    {
+      "name": "reset_cart",
+      "patterns": ["reset cart", "clear cart", "empty cart", "remove all from cart", "delete cart", "clear my cart", "empty my cart", "reset my cart"],
+      "entities": [],
+      "requiredSlots": [],
+      "priority": 0.85,
+      "confidenceThreshold": 0.7
     }
   ],
   "entities": [

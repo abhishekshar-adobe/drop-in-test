@@ -107,6 +107,10 @@ export default class ActionExecutor {
         result = await this.handleAnalyticsQuery(intent.entities, intent.text);
         break;
       
+      case 'reset_cart':
+        result = await this.handleResetCart();
+        break;
+      
       default:
         result = {
           success: false,
@@ -405,6 +409,29 @@ export default class ActionExecutor {
         success: false,
         intent: 'return_order',
         message: `❌ Failed to request return: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Handle reset/clear/empty cart
+   */
+  async handleResetCart() {
+    try {
+      const result = await this.api.resetCart();
+      
+      return {
+        success: true,
+        intent: 'reset_cart',
+        message: '🗑️ Your cart has been cleared successfully!',
+        data: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        intent: 'reset_cart',
+        message: `❌ Failed to clear cart: ${error.message}`,
+        error: error.message
       };
     }
   }

@@ -73,6 +73,7 @@ console.log(response.message);
 | `place_order` | "checkout" | - | Text (Confirmation) |
 | `cancel_order` | "cancel order 123 reason mistake" | order_number, reason | Text (Confirmation) |
 | `return_order` | "return order 123 reason defective" | order_number, reason | Text (Confirmation) |
+| `reset_cart` | "clear my cart" | - | Text (Confirmation) |
 | `analytics_query` | "total spend this year" | - | Text/UI (Metric-dependent) |
 
 ## Analytics Query Examples
@@ -198,3 +199,4 @@ See `examples/analytics-example.js` for end-to-end analytics demo.
 - ✅ Enhanced order ID extraction for base64 format
 - ✅ Added multi-intent processing steps visualization
 - ✅ Improved slot validation with auto-completion flow
+- ✅ Added `reset_cart` intent for clear/empty/reset cart operations

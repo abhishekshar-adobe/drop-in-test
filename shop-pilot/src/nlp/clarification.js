@@ -110,7 +110,8 @@ export default class Clarification {
       check_price: "💰 Check price",
       view_orders: "📦 View orders",
       track_order: "📍 Track an order",
-      view_cart: "🛒 View cart"
+      view_cart: "🛒 View cart",
+      reset_cart: "🗑️ Clear cart"
     };
 
     return labels[intentName] || intentName;
