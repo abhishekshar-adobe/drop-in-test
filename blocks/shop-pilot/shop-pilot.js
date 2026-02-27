@@ -32,6 +32,10 @@ export default async function decorate(block) {
               <span class="status-indicator"></span>
               Online
             </span>
+            <span class="llm-status" title="LLM Status">
+              <span class="llm-indicator"></span>
+              <span class="llm-label">LLM</span>
+            </span>
           </div>
         </div>
         
@@ -113,6 +117,23 @@ export default async function decorate(block) {
   
   // Append the chatbot to the block
   block.appendChild(wrapper.firstElementChild);
+
+  // Check LLM availability and update indicator
+  if (shopPilot) {
+    shopPilot.isLLMAvailable().then((available) => {
+      const indicator = block.querySelector('.llm-indicator');
+      const label = block.querySelector('.llm-label');
+      if (indicator) {
+        indicator.classList.toggle('llm-active', available);
+        indicator.classList.toggle('llm-inactive', !available);
+      }
+      if (label) {
+        label.textContent = available ? 'LLM Active' : 'LLM Off';
+      }
+    }).catch(() => {
+      // Silently ignore — indicator stays in default (off) state
+    });
+  }
 
   // Initialize chatbot functionality
   initChatbot(block, shopPilot);

@@ -5,6 +5,9 @@ import Clarification from './nlp/clarification.js';
 import ActionExecutor from './actions/executor.js';
 import Logger from './utils/logger.js';
 import config from '../config/config.js';
+import LLMService from './llm/llmService.js';
+import LLMInputProcessor from './llm/llmInputProcessor.js';
+import LLMResponseGenerator from './llm/llmResponseGenerator.js';
 
 /**
  * Main Shop Pilot Chatbot Class
@@ -18,6 +21,12 @@ export default class ShopPilot {
     this.clarification = new Clarification();
     this.executor = new ActionExecutor();
     this.logger = new Logger();
+
+    // LLM integration (Ollama / Llama 3.1)
+    this.llmService = new LLMService();
+    this.llmInput = new LLMInputProcessor(this.llmService);
+    this.llmResponse = new LLMResponseGenerator(this.llmService);
+    this.llmAvailable = null; // null = unknown, updated after first check
     
     this.conversationContext = {
       history: [],
@@ -36,21 +45,49 @@ export default class ShopPilot {
     this.logger.info('Processing user input:', userInput);
 
     try {
-      // Step 1: Domain Language Model processing
-      const dlmOutput = await this.dlm.process(userInput);
-      this.logger.debug('DLM output:', dlmOutput);
+      let scoredIntents;
+      let usedLLM = false;
 
-      // Step 2: Multi-intent detection
-      const intents = this.intentDetector.detect(dlmOutput);
-      this.logger.debug('Detected intents:', intents);
+      // ── LLM-first path ────────────────────────────────────────────────
+      // Try the LLM for intent detection & entity extraction.
+      // If it succeeds we skip Steps 1-3 (DLM, IntentDetector, ConfidenceScorer).
+      // On failure we fall through to the rule-based pipeline.
+      try {
+        const llmIntents = await this.llmInput.processInput(
+          userInput,
+          this.conversationContext.history,
+        );
+        if (llmIntents && llmIntents.length > 0) {
+          scoredIntents = llmIntents;
+          // Attach original text for analytics queries
+          scoredIntents.forEach(intent => { intent.text = userInput; });
+          usedLLM = true;
+          this.llmAvailable = true;
+          this.logger.info('LLM intent detection succeeded:', scoredIntents.map(i => i.name));
+        }
+      } catch (llmErr) {
+        this.logger.warn('LLM input processing error, falling back:', llmErr.message);
+      }
+
+      // ── Rule-based fallback (Steps 1-3) ───────────────────────────────
+      if (!scoredIntents || scoredIntents.length === 0) {
+        // Step 1: Domain Language Model processing
+        const dlmOutput = await this.dlm.process(userInput);
+        this.logger.debug('DLM output:', dlmOutput);
+
+        // Step 2: Multi-intent detection
+        const intents = this.intentDetector.detect(dlmOutput);
+        this.logger.debug('Detected intents:', intents);
       
-      // Add original text to each intent for analytics queries
-      intents.forEach(intent => {
-        intent.text = userInput;
-      });
+        // Add original text to each intent for analytics queries
+        intents.forEach(intent => {
+          intent.text = userInput;
+        });
 
-      // Step 3: Confidence scoring
-      const scoredIntents = this.confidenceScorer.score(intents);
+        // Step 3: Confidence scoring
+        scoredIntents = this.confidenceScorer.score(intents);
+      }
+
       this.logger.debug('Scored intents:', scoredIntents);
 
       // Build processing steps for UI display (multi-intent)
@@ -142,6 +179,27 @@ export default class ShopPilot {
       const results = await this.executor.execute(scoredIntents);
       this.logger.info('Action results:', results);
 
+      // ── LLM response enhancement ─────────────────────────────────────
+      // For text-display results, try generating a more natural response
+      // via the LLM. Falls back to the template message on failure.
+      for (const result of results) {
+        if (result.displayAs !== 'ui' && result.intent && result.message) {
+          try {
+            const enhanced = await this.llmResponse.generateOrFallback(
+              result.intent,
+              result,
+              this.conversationContext.history,
+            );
+            if (enhanced) {
+              result.message = enhanced;
+            }
+          } catch (respErr) {
+            this.logger.warn('LLM response generation error:', respErr.message);
+            // Keep original template message
+          }
+        }
+      }
+
       // Update conversation context
       this.conversationContext.history.push({
         input: userInput,
@@ -155,6 +213,9 @@ export default class ShopPilot {
       if (processingSteps.length > 1) {
         response.processingSteps = processingSteps;
       }
+
+      // Tag whether LLM was used (for UI status indicator)
+      response.usedLLM = usedLLM;
       
       return response;
     } catch (error) {
@@ -337,6 +398,21 @@ export default class ShopPilot {
       'analytics_query': 'Analytics'
     };
     return displayNames[intentName] || intentName;
+  }
+
+  /**
+   * Check if the LLM is available (for UI status indicator)
+   * @returns {Promise<boolean>}
+   */
+  async isLLMAvailable() {
+    try {
+      const available = await this.llmService.isAvailable();
+      this.llmAvailable = available;
+      return available;
+    } catch {
+      this.llmAvailable = false;
+      return false;
+    }
   }
 
   /**

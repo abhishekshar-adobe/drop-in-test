@@ -74,6 +74,42 @@
   animation: pulse 2s infinite;
 }
 
+/* LLM Status Indicator */
+.shop-pilot .llm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  vertical-align: middle;
+}
+
+.shop-pilot .llm-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  transition: background 0.3s ease;
+}
+
+.shop-pilot .llm-indicator.llm-active {
+  background: #4ade80;
+  box-shadow: 0 0 4px rgba(74, 222, 128, 0.6);
+}
+
+.shop-pilot .llm-indicator.llm-inactive {
+  background: #94a3b8;
+}
+
+.shop-pilot .llm-label {
+  opacity: 0.85;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;

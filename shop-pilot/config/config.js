@@ -1,3 +1,5 @@
+import llmConfig from './llm-config.js';
+
 export default {
   // Confidence thresholds
   thresholds: {
@@ -21,6 +23,9 @@ export default {
     minMatchLength: 3,
     maxIntentsPerQuery: 3
   },
+
+  // LLM settings (Ollama / Llama 3.1)
+  llm: llmConfig,
 
   // Logging
   logging: {
