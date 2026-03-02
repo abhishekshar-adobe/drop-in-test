@@ -94,6 +94,21 @@ export default async function decorate(block) {
               placeholder="Type your message..."
               aria-label="Chat message input"
             />
+            <button class="voice-btn" aria-label="Voice input" title="Click to speak">
+              <svg class="mic-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+              <svg class="mic-off-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
+                <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
             <button class="send-btn" aria-label="Send message">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -143,11 +158,130 @@ function initChatbot(block, shopPilot) {
   const messagesContainer = block.querySelector('.chatbot-messages');
   const input = block.querySelector('.chatbot-input');
   const sendBtn = block.querySelector('.send-btn');
+  const voiceBtn = block.querySelector('.voice-btn');
   const quickReplies = block.querySelectorAll('.quick-reply');
   const typingIndicator = block.querySelector('.typing-indicator');
   
   // Store current product list for number-based selection
   let currentProducts = [];
+  
+  // Voice recognition state
+  let isRecording = false;
+  let recognition = null;
+
+  // Initialize Speech Recognition
+  function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      console.warn('Speech recognition not supported in this browser');
+      if (voiceBtn) voiceBtn.style.display = 'none';
+      return null;
+    }
+
+    const speechRecognition = new SpeechRecognition();
+    speechRecognition.continuous = false;
+    speechRecognition.interimResults = true;
+    speechRecognition.lang = 'en-US';
+
+    speechRecognition.onstart = () => {
+      isRecording = true;
+      voiceBtn.classList.add('recording');
+      voiceBtn.querySelector('.mic-icon').style.display = 'none';
+      voiceBtn.querySelector('.mic-off-icon').style.display = 'block';
+      input.placeholder = 'Listening...';
+    };
+
+    speechRecognition.onresult = (event) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const { transcript } = event.results[i][0];
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Show interim results in input
+      input.value = finalTranscript || interimTranscript;
+
+      // Auto-send when final result is received
+      if (finalTranscript) {
+        setTimeout(() => {
+          sendMessage(finalTranscript);
+        }, 500);
+      }
+    };
+
+    speechRecognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      stopRecording();
+      
+      if (event.error === 'not-allowed') {
+        addMessage('Microphone access denied. Please allow microphone access to use voice search.', 'bot');
+      } else if (event.error === 'no-speech') {
+        input.placeholder = 'No speech detected. Try again...';
+        setTimeout(() => {
+          input.placeholder = 'Type your message...';
+        }, 2000);
+      }
+    };
+
+    speechRecognition.onend = () => {
+      stopRecording();
+    };
+
+    return speechRecognition;
+  }
+
+  function startRecording() {
+    if (!recognition) {
+      recognition = initSpeechRecognition();
+    }
+    if (recognition) {
+      try {
+        recognition.start();
+      } catch (e) {
+        console.error('Error starting recognition:', e);
+      }
+    }
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    if (voiceBtn) {
+      voiceBtn.classList.remove('recording');
+      const micIcon = voiceBtn.querySelector('.mic-icon');
+      const micOffIcon = voiceBtn.querySelector('.mic-off-icon');
+      if (micIcon) micIcon.style.display = 'block';
+      if (micOffIcon) micOffIcon.style.display = 'none';
+    }
+    input.placeholder = 'Type your message...';
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (e) {
+        // Already stopped
+      }
+    }
+  }
+
+  // Voice button click handler
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+  }
+
+  // Initialize speech recognition on load
+  recognition = initSpeechRecognition();
 
   // Focus input on load
   setTimeout(() => {
