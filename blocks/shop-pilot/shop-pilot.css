@@ -1,5 +1,8 @@
 /* Import component styles */
+@import '../../shop-pilot/src/components/ProductListUI.css';
+@import '../../shop-pilot/src/components/ProductDetailUI.css';
 @import '../../shop-pilot/src/components/OrderListUI.css';
+@import '../../shop-pilot/src/components/CartUI.css';
 
 .shop-pilot .chatbot-container {
   width: 100%;

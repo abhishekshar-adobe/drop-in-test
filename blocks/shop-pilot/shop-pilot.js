@@ -1,6 +1,8 @@
 import ShopPilot from '../../shop-pilot/src/index.js';
 import ProductListUI from '../../shop-pilot/src/components/ProductListUI.js';
+import ProductDetailUI from '../../shop-pilot/src/components/ProductDetailUI.js';
 import OrderListUI from '../../shop-pilot/src/components/OrderListUI.js';
+import CartUI from '../../shop-pilot/src/components/CartUI.js';
 
 export default async function decorate(block) {
   // Remove all existing children
@@ -346,12 +348,31 @@ function initChatbot(block, shopPilot) {
           if (response.message) {
             addMessage(response.message, 'bot');
           }
+        } else if (response.displayAs === 'ui' && (response.intent === 'select_product' || response.action === 'select_product')) {
+          // Render product detail UI
+          const product = response.data || null;
+          renderProductDetailUI(product);
+          
+          // If there's a message, show it
+          if (response.message) {
+            addMessage(response.message, 'bot');
+          }
         } else if (response.displayAs === 'ui' && (response.intent === 'view_orders' || response.action === 'view_orders')) {
           // Render order list UI
           console.log('[ShopPilot] Rendering order list UI with data:', response.data);
           console.log('[ShopPilot] First order details:', response.data?.[0]);
           const orders = response.data || [];
           renderOrderListUI(orders);
+          
+          // If there's a message, show it
+          if (response.message) {
+            addMessage(response.message, 'bot');
+          }
+        } else if (response.displayAs === 'ui' && (response.intent === 'view_cart' || response.action === 'view_cart')) {
+          // Render cart UI
+          console.log('[ShopPilot] Rendering cart UI with data:', response.data);
+          const cart = response.data || {};
+          renderCartUI(cart);
           
           // If there's a message, show it
           if (response.message) {
@@ -445,6 +466,25 @@ function initChatbot(block, shopPilot) {
     return "Thanks for your message! How can I help you today? 😊";
   }
 
+  // Render ProductDetailUI component
+  function renderProductDetailUI(product) {
+    const container = document.createElement('div');
+    container.className = 'product-detail-container';
+    
+    ProductDetailUI.render(container, product);
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message product-detail-ui-message';
+    messageDiv.innerHTML = `
+      <div class="message-content">
+      </div>
+    `;
+    messageDiv.querySelector('.message-content').appendChild(container);
+    
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+  }
+
   // Render ProductListUI component
   function renderProductListUI(products) {
     // Store products for number-based selection
@@ -454,8 +494,9 @@ function initChatbot(block, shopPilot) {
     container.className = 'product-list-container';
     
     ProductListUI.render(container, products, (product, index) => {
-      // Handle product selection - trigger add to cart
-      sendMessage(`add ${product.sku} to cart`);
+      // Handle product selection - show product details
+      console.log('[ShopPilot] Product clicked:', product.sku);
+      sendMessage(`select ${product.sku}`);
     });
     
     const messageDiv = document.createElement('div');
@@ -471,7 +512,7 @@ function initChatbot(block, shopPilot) {
     
     // Add helper message
     setTimeout(() => {
-      addMessage('💡 Tip: You can say "add 1 to cart" or "add 3 to wishlist" to select a product by number.', 'bot');
+      addMessage('💡 Tip: Click any product to view details, or say "show details of 1" or "add 3 to cart" to select by number.', 'bot');
     }, 500);
   }
 
@@ -503,6 +544,29 @@ function initChatbot(block, shopPilot) {
         addMessage(`📦 You have ${orders.length} order${orders.length !== 1 ? 's' : ''}`, 'bot');
       }, 300);
     }
+  }
+
+  // Render CartUI component
+  function renderCartUI(cart) {
+    console.log('[ShopPilot] renderCartUI called with cart:', cart);
+    
+    const container = document.createElement('div');
+    container.className = 'cart-ui-container';
+    
+    CartUI.render(container, cart);
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message cart-ui-message';
+    messageDiv.innerHTML = `
+      <div class="message-content">
+      </div>
+    `;
+    messageDiv.querySelector('.message-content').appendChild(container);
+    
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    
+    console.log('[ShopPilot] Cart UI rendered');
   }
 
   // Display processing steps for multi-intent queries
@@ -597,6 +661,13 @@ function initChatbot(block, shopPilot) {
       const message = reply.dataset.message;
       sendMessage(message);
     });
+  });
+
+  // Listen for custom events from UI components (e.g., ProductDetailUI action buttons)
+  document.addEventListener('shop-pilot-message', (event) => {
+    if (event.detail && event.detail.message) {
+      sendMessage(event.detail.message);
+    }
   });
 
   // Auto-resize input
