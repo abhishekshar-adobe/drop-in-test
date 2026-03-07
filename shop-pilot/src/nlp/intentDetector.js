@@ -71,11 +71,14 @@ export default class IntentDetector {
       
       // Only include intents that meet their specific confidence threshold
       if (score >= threshold) {
+        const entities = this.extractEntitiesForIntent(intentDef, dlmOutput);
+        console.log(`[IntentDetector] Intent ${intentDef.name} extracted entities:`, entities);
+        
         detectedIntents.push({
           name: intentDef.name,
           rawScore: score,
           priority: intentDef.priority || 0.5,
-          entities: this.extractEntitiesForIntent(intentDef, dlmOutput),
+          entities: entities,
           requiredSlots: intentDef.requiredSlots,
         });
       }
@@ -91,6 +94,15 @@ export default class IntentDetector {
       return b.rawScore - a.rawScore;
     });
     
+    // Debug: Log detected intents and scores
+    if (sorted.length > 0) {
+      console.log('[IntentDetector] Detected intents with scores:');
+      sorted.forEach((intent, idx) => {
+        console.log(`  ${idx + 1}. ${intent.name}: score=${intent.rawScore.toFixed(2)}, priority=${intent.priority}`);
+      });
+      console.log(`[IntentDetector] Top intent: ${sorted[0].name}`);
+    }
+    
     if (sorted.length === 0) {
       return [];
     }
@@ -99,7 +111,7 @@ export default class IntentDetector {
     const topIntent = sorted[0];
     
     // Define intent exclusion rules: specific intents block generic ones
-    const specificIntents = ['view_cart', 'view_orders', 'track_order', 'add_to_wishlist', 'add_to_cart', 'check_price'];
+    const specificIntents = ['view_cart', 'view_orders', 'track_order', 'add_to_wishlist', 'add_to_cart', 'check_price', 'select_product'];
     const genericIntents = ['product_search'];
     
     // If top intent is specific, don't include generic product_search
@@ -136,6 +148,39 @@ export default class IntentDetector {
   scoreIntent(intentDef, dlmOutput) {
     let score = 0;
     let hasPatternMatch = false;
+
+    // SKU-aware scoring: If SKU is present in input, boost select_product
+    const hasSKU = dlmOutput.entities?.sku || /\b[A-Z]{3,4}\d{3,4}\b/i.test(dlmOutput.originalText);
+    
+    // Number-aware scoring: If number present with selection patterns, it's likely select_product
+    // Be more specific: only match when "show/view/tell" is used with "details/info/about"
+    const hasNumber = (dlmOutput.numbers && dlmOutput.numbers.length > 0) || /\b\d+\b/.test(dlmOutput.originalText);
+    const hasSelectionPattern = /\b(select|choose|pick)\b/i.test(dlmOutput.originalText) ||
+                                /\b(show|view|tell|give|get)\s+(me\s+)?(details?|info|information|more|about)/i.test(dlmOutput.originalText) ||
+                                /\bdetails?\s+(of|for|about|on)/i.test(dlmOutput.originalText);
+    const isNumberSelection = hasNumber && hasSelectionPattern;
+    
+    if (hasSKU) {
+      console.log(`[IntentDetector] SKU detected in input: "${dlmOutput.originalText}"`);
+      // SKU detected - strongly favor select_product over product_search
+      if (intentDef.name === 'select_product') {
+        score += 3.0; // Major boost for select_product when SKU present
+        console.log(`[IntentDetector] Boosting select_product score by 3.0`);
+      } else if (intentDef.name === 'product_search') {
+        score -= 1.0; // Penalize product_search when SKU present
+        console.log(`[IntentDetector] Penalizing product_search score by -1.0`);
+      }
+    } else if (isNumberSelection) {
+      console.log(`[IntentDetector] Number selection detected: "${dlmOutput.originalText}", numbers: ${JSON.stringify(dlmOutput.numbers)}`);
+      // Number + selection patterns (like "show details of 1") - favor select_product
+      if (intentDef.name === 'select_product') {
+        score += 2.5; // Strong boost for select_product when number+pattern present
+        console.log(`[IntentDetector] Boosting select_product score by 2.5`);
+      } else if (intentDef.name === 'product_search') {
+        score -= 1.5; // Strong penalty for product_search when selecting by number
+        console.log(`[IntentDetector] Penalizing product_search score by -1.5`);
+      }
+    }
 
     // Check if any patterns match
     intentDef.patterns.forEach((pattern) => {
@@ -210,6 +255,18 @@ export default class IntentDetector {
       entities.product = dlmOutput.entities.products[0];
       entities.attributes = normalizedAttributes;
       entities.sku = dlmOutput.entities.sku || null; // Extract SKU from DLM
+      
+    } else if (intentDef.name === 'select_product') {
+      // Extract SKU from DLM - this is the primary entity for select_product
+      console.log('[IntentDetector] DLM output for select_product:', {
+        sku: dlmOutput.entities?.sku,
+        products: dlmOutput.entities?.products,
+        originalText: dlmOutput.originalText
+      });
+      entities.sku = dlmOutput.entities.sku || null;
+      entities.product = dlmOutput.entities.products[0] || null;
+      entities.attributes = normalizedAttributes;
+      console.log('[IntentDetector] Extracted entities for select_product:', entities);
       
     } else if (intentDef.name === 'check_price') {
       entities.product = dlmOutput.entities.products[0] || dlmOutput.nouns[0];

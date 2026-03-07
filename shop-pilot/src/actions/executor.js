@@ -33,9 +33,14 @@ export default class ActionExecutor {
         continue;
       }
 
-      // Only execute high confidence intents (or those marked as high in clarification flow)
-      if (intent.confidenceLevel && intent.confidenceLevel !== 'high') {
-        continue;
+      // Execute intents based on confidence level
+      // - If confidenceLevel is set: execute 'high' and 'medium' (skip 'low')
+      // - If no confidenceLevel: execute (backward compatibility)
+      if (intent.confidenceLevel) {
+        if (intent.confidenceLevel === 'low') {
+          console.log(`[Executor] Skipping low confidence intent: ${intent.name}`);
+          continue;
+        }
       }
 
       try {
@@ -58,7 +63,11 @@ export default class ActionExecutor {
    * Execute single intent
    */
   async executeIntent(intent) {
-    this.logger.info(`Executing intent: ${intent.name}`);
+    this.logger.info(`Executing intent: ${intent.name}`, {
+      confidence: intent.confidence,
+      confidenceLevel: intent.confidenceLevel,
+      entities: intent.entities
+    });
 
     let result;
     
@@ -77,6 +86,10 @@ export default class ActionExecutor {
       
       case 'check_price':
         result = await this.handleCheckPrice(intent.entities);
+        break;
+      
+      case 'select_product':
+        result = await this.handleSelectProduct(intent.entities);
         break;
       
       case 'view_orders':
@@ -108,6 +121,7 @@ export default class ActionExecutor {
         break;
       
       case 'reset_cart':
+      case 'clear_cart':
         result = await this.handleResetCart();
         break;
       
@@ -131,7 +145,11 @@ export default class ActionExecutor {
   }
 
   async handleProductSearch(entities) {
+    console.log('[Executor] handleProductSearch called with entities:', entities);
+    
     const results = await this.api.searchProducts(entities.query, entities.attributes);
+    
+    console.log('[Executor] Search results:', results);
     
     if (results.total === 0) {
       return {
@@ -240,6 +258,61 @@ export default class ActionExecutor {
     };
   }
 
+  /**
+   * Handle select product - fetch detailed product data using GraphQL
+   * @param {Object} entities - Contains sku
+   * @returns {Promise<Object>} Result with product data (ProductView) and LLM-generated summary
+   */
+  async handleSelectProduct(entities) {
+    try {
+      console.log('[Executor] handleSelectProduct called with entities:', entities);
+      
+      if (!entities.sku) {
+        console.log('[Executor] No SKU provided, returning error');
+        return {
+          success: false,
+          intent: 'select_product',
+          message: '❌ Please provide a product SKU to view details'
+        };
+      }
+
+      console.log(`[Executor] Fetching product details for SKU: ${entities.sku} using GraphQL`);
+      
+      // Fetch full product data using direct GraphQL query (returns ProductView)
+      const productData = await this.api.fetchProductData(entities.sku);
+      
+      console.log('[Executor] Product data received:', productData);
+      
+      if (!productData) {
+        console.log('[Executor] Product data is null or undefined');
+        return {
+          success: false,
+          intent: 'select_product',
+          message: `❌ Product with SKU "${entities.sku}" not found`
+        };
+      }
+
+      console.log('[Executor] Product data fetched successfully, preparing response');
+
+      // Return product data with UI display flag for formatted card rendering
+      return {
+        success: true,
+        intent: 'select_product',
+        message: `📦 Product details for ${productData.name || productData.sku}`,
+        data: productData,
+        displayAs: 'ui' // Render as UI component (ProductDetailUI)
+      };
+    } catch (error) {
+      console.error('[Executor] handleSelectProduct failed:', error);
+      return {
+        success: false,
+        intent: 'select_product',
+        message: `❌ Failed to fetch product details: ${error.message}`,
+        error: error.message
+      };
+    }
+  }
+
   async handleViewOrders() {
     const orders = await this.api.getOrders();
     return {
@@ -264,10 +337,31 @@ export default class ActionExecutor {
 
   async handleViewCart() {
     const cart = await this.api.getCart();
+    
+    console.log('[Executor] handleViewCart - cart:', {
+      id: cart.id,
+      totalQuantity: cart.totalQuantity,
+      total: cart.total,
+      hasItems: cart.items?.length > 0,
+      itemsArray: cart.items
+    });
+    
+    if (!cart || !cart.id || cart.totalQuantity === 0) {
+      return {
+        success: true,
+        intent: 'view_cart',
+        displayAs: 'ui',
+        message: `🛒 Your cart is empty. Start shopping to add items!`,
+        data: cart
+      };
+    }
+    
+    // Return UI display with cart data
     return {
       success: true,
       intent: 'view_cart',
-      message: `🛒 You have ${cart.itemCount} items in your cart`,
+      displayAs: 'ui',
+      message: `🛒 Showing your cart with ${cart.totalQuantity} item${cart.totalQuantity !== 1 ? 's' : ''}`,
       data: cart
     };
   }

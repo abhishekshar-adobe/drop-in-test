@@ -236,6 +236,7 @@ export default class DLM {
       // Check if token looks like a SKU (alphanumeric, often starts with letters)
       if (/^[A-Z]{3,4}\d{3,4}$/i.test(token)) {
         entities.sku = token.toUpperCase();
+        console.log(`[DLM] SKU extracted: ${entities.sku}`);
       }
     });
 

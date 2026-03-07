@@ -47,6 +47,18 @@ const RESPONSE_TEMPLATES = {
     ]
   },
   
+  select_product: {
+    success: [
+      "📦 {name} - {description} Price: {price}. {stock}",
+      "📦 Here's what I found: {name} - {shortDescription} Available for {price}. {stock}",
+      "📦 Product Details: {name} - {description} ${price}. {stock}"
+    ],
+    not_found: [
+      "😞 I couldn't find product with SKU {sku}",
+      "😞 Sorry, product {sku} isn't available"
+    ]
+  },
+  
   track_order: {
     success: [
       "📍 Order #{order_number} status: {status}",
@@ -237,6 +249,15 @@ function extractValues(data, intent) {
     case 'check_price':
       values.product = data.data?.product?.name || 'the product';
       values.price = formatPrice(data.data?.price);
+      break;
+      
+    case 'select_product':
+      values.name = data.data?.name || 'Product';
+      values.description = data.data?.description || data.data?.shortDescription || '';
+      values.shortDescription = data.data?.shortDescription || '';
+      values.price = formatPrice(data.data?.price);
+      values.sku = data.data?.sku || '';
+      values.stock = data.data?.inStock ? 'In Stock' : 'Out of Stock';
       break;
       
     case 'track_order':

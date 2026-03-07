@@ -234,6 +234,42 @@ export default class EcommerceAPI {
   }
 
   /**
+   * Fetch detailed product data by SKU using direct GraphQL query
+   * @param {string} sku - Product SKU
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Object>} Product details (ProductModel)
+   */
+  async fetchProductData(sku, options = {}) {
+    try {
+      console.log(`[API] Fetching product data for SKU: ${sku}`);
+      
+      // Use direct GraphQL query instead of dropin to ensure correct endpoint/headers
+      const variables = {
+        skus: [sku]
+      };
+      
+      console.log('[API] Calling GraphQL with productDetail query');
+      const data = await this.graphqlRequest(apiConfig.queries.productDetail, variables);
+      
+      console.log('[API] GraphQL response:', data);
+      
+      if (!data || !data.products || data.products.length === 0) {
+        console.log('[API] No products found in response');
+        return null;
+      }
+      
+      const productData = data.products[0];
+      console.log('[API] Product data received:', productData);
+      
+      return productData;
+    } catch (error) {
+      console.error('[API] Fetch product data failed:', error);
+      console.error('[API] Error stack:', error.stack);
+      throw error;
+    }
+  }
+
+  /**
    * Get customer orders using storefront-order dropin fetchGraphQl (handles CORS)
    * @param {Object} options - Query options
    * @param {number} options.currentPage - Current page number (default: 1)
@@ -364,11 +400,17 @@ export default class EcommerceAPI {
     try {
       console.log('[API] Resetting cart');
       
-      const cartApi = await import('../../../scripts/__dropins__/storefront-cart/api.js');
-      const result = await cartApi.resetCart();
+      const { resetCart, refreshCart } = await import('../../../scripts/__dropins__/storefront-cart/api.js');
+      const result = await resetCart();
       
       console.log('[API] Reset cart result:', result);
-      return result;
+      
+      // Refresh cart data after clearing
+      console.log('[API] Refreshing cart after clear');
+      const refreshedCart = await refreshCart();
+      console.log('[API] Cart refreshed:', refreshedCart);
+      
+      return refreshedCart;
     } catch (error) {
       console.error('[API] Reset cart failed:', error);
       throw error;
@@ -382,14 +424,61 @@ export default class EcommerceAPI {
     try {
       console.log('[API] Getting cart');
       
-      return {
-        id: 'cart-123',
-        itemCount: 3,
-        total: 119.97
-      };
+      // Import cart functions
+      const { getCartData, refreshCart } = await import('../../../scripts/__dropins__/storefront-cart/api.js');
+      
+      // Try to refresh cart first to ensure we have latest data
+      try {
+        await refreshCart();
+        console.log('[API] Cart refreshed');
+      } catch (refreshError) {
+        console.log('[API] Cart refresh failed (might not exist yet):', refreshError.message);
+      }
+      
+      // Get cart data
+      const cartData = await getCartData();
+      
+      console.log('[API] Raw cart data:', cartData);
+      
+      if (!cartData) {
+        console.log('[API] No cart data available');
+        return {
+          id: null,
+          totalQuantity: 0,
+          items: [],
+          total: { includingTax: { value: 0, currency: 'USD' }, excludingTax: { value: 0, currency: 'USD' } },
+          subtotal: { excludingTax: { value: 0, currency: 'USD' }, includingTax: { value: 0, currency: 'USD' } }
+        };
+      }
+      
+      const itemCount = cartData.totalQuantity || cartData.total_quantity || 0;
+      const items = cartData.items || [];
+      // Handle both camelCase (transformed) and snake_case (raw GraphQL)
+      const total = cartData.prices?.grandTotal?.value || 
+                    cartData.prices?.grand_total?.value || 0;
+      const currency = cartData.prices?.grandTotal?.currency || 
+                       cartData.prices?.grand_total?.currency || 'USD';
+      
+      console.log('[API] Transformed cart data:', {
+        id: cartData.id,
+        totalQuantity: cartData.totalQuantity,
+        itemsLength: items.length,
+        total: cartData.total,
+        subtotal: cartData.subtotal,
+        firstItem: items[0]?.name
+      });
+      
+      // Return the full CartModel structure
+      return cartData;
     } catch (error) {
       console.error('[API] Get cart failed:', error);
-      throw error;
+      return {
+        id: null,
+        totalQuantity: 0,
+        items: [],
+        total: { includingTax: { value: 0, currency: 'USD' }, excludingTax: { value: 0, currency: 'USD' } },
+        subtotal: { excludingTax: { value: 0, currency: 'USD' }, includingTax: { value: 0, currency: 'USD' } }
+      };
     }
   }
 

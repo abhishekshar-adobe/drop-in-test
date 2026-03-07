@@ -31,8 +31,10 @@ export default class ShopPilot {
     this.conversationContext = {
       history: [],
       currentIntent: null,
+      lastIntent: null,
       awaitingClarification: false,
-      lastProducts: []
+      lastProducts: [],
+      contextTimestamp: null
     };
   }
 
@@ -46,6 +48,7 @@ export default class ShopPilot {
 
     try {
       let scoredIntents;
+      let dlmOutput; // Declare at top level so it's available throughout
       let usedLLM = false;
 
       // ── LLM-first path ────────────────────────────────────────────────
@@ -64,6 +67,7 @@ export default class ShopPilot {
           usedLLM = true;
           this.llmAvailable = true;
           this.logger.info('LLM intent detection succeeded:', scoredIntents.map(i => i.name));
+          console.log('[ShopPilot] LLM detected intents:', scoredIntents.map(i => `${i.name} (conf: ${i.confidence})`));
         }
       } catch (llmErr) {
         this.logger.warn('LLM input processing error, falling back:', llmErr.message);
@@ -72,7 +76,7 @@ export default class ShopPilot {
       // ── Rule-based fallback (Steps 1-3) ───────────────────────────────
       if (!scoredIntents || scoredIntents.length === 0) {
         // Step 1: Domain Language Model processing
-        const dlmOutput = await this.dlm.process(userInput);
+        dlmOutput = await this.dlm.process(userInput);
         this.logger.debug('DLM output:', dlmOutput);
 
         // Step 2: Multi-intent detection
@@ -105,7 +109,29 @@ export default class ShopPilot {
         return clarificationResponse;
       }
 
-      // Step 4.5: Validate required slots and trigger clarification if needed
+      // Step 4.5: Resolve product numbers to SKUs from context (BEFORE validation)
+      // This allows "show 1" to become "show ACTUAL_SKU" before we check requirements
+      console.log('[ShopPilot] Step 4.5: Resolving product numbers from context');
+      console.log('[ShopPilot] Intents before resolution:', scoredIntents.map(i => `${i.name} (sku: ${i.entities?.sku || 'none'})`));
+      this.resolveProductNumbers(scoredIntents, dlmOutput);
+      console.log('[ShopPilot] Intents after resolution:', scoredIntents.map(i => `${i.name} (sku: ${i.entities?.sku || 'none'})`));
+
+      // Step 4.6: Validate required context for context-dependent intents
+      // Check this BEFORE slot validation so we can catch "show 1" without prior search
+      console.log('[ShopPilot] Step 4.6: Validating context requirements');
+      const contextValidation = this.validateContext(scoredIntents);
+      if (contextValidation.needsClarification) {
+        console.log('[ShopPilot] Context validation failed - intent requires prior context');
+        return {
+          success: false,
+          message: contextValidation.message,
+          suggestion: contextValidation.suggestion
+        };
+      }
+      console.log('[ShopPilot] Context validation passed');
+
+      // Step 4.7: Validate required slots and trigger clarification if needed
+      console.log('[ShopPilot] Step 4.7: Validating required slots');
       const slotValidation = this.validateSlots(scoredIntents);
       if (slotValidation.needsClarification) {
         // Store pending action and trigger product search first
@@ -115,6 +141,15 @@ export default class ShopPilot {
         if (slotValidation.clarificationIntent) {
           const searchIntent = slotValidation.clarificationIntent;
           const results = await this.executor.execute([searchIntent]);
+          
+          // Update context with search results
+          if (results[0]?.intent === 'product_search' && results[0]?.data?.items) {
+            this.conversationContext.lastProducts = results[0].data.items;
+            this.conversationContext.lastIntent = 'product_search';
+            this.conversationContext.contextTimestamp = Date.now();
+            console.log('[ShopPilot] Context updated with', results[0].data.items.length, 'products from auto-search');
+          }
+          
           this.conversationContext.lastSearchResults = results[0]?.data;
           
           // Check if user specified a product number in the original query
@@ -174,16 +209,34 @@ export default class ShopPilot {
           needsSelection: true
         };
       }
+      console.log('[ShopPilot] Slot validation passed');
 
       // Step 5: Execute actions
+      console.log('[ShopPilot] Step 5: Executing actions for intents:', scoredIntents.map(i => i.name));
       const results = await this.executor.execute(scoredIntents);
       this.logger.info('Action results:', results);
+      
+      // Update context after successful execution
+      for (const result of results) {
+        if (result.success && result.intent === 'product_search' && result.data?.items) {
+          this.conversationContext.lastProducts = result.data.items;
+          this.conversationContext.lastIntent = 'product_search';
+          this.conversationContext.contextTimestamp = Date.now();
+          console.log('[ShopPilot] Context updated with', result.data.items.length, 'products');
+        }
+        
+        // Clear product context after adding to cart/wishlist or selecting
+        if (result.success && ['add_to_cart', 'add_to_wishlist'].includes(result.intent)) {
+          // Don't clear immediately - keep context for follow-up actions
+          console.log('[ShopPilot] Keeping product context for follow-up actions');
+        }
+      }
 
       // ── LLM response enhancement ─────────────────────────────────────
       // For text-display results, try generating a more natural response
       // via the LLM. Falls back to the template message on failure.
       for (const result of results) {
-        if (result.displayAs !== 'ui' && result.intent && result.message) {
+        if (result.displayAs !== 'ui' && result.intent && (result.message || result.requiresLLMSummary)) {
           try {
             const enhanced = await this.llmResponse.generateOrFallback(
               result.intent,
@@ -243,6 +296,27 @@ export default class ShopPilot {
    */
   validateSlots(scoredIntents) {
     for (const intent of scoredIntents) {
+      // Check select_product which requires SKU
+      if (intent.name === 'select_product') {
+        if (!intent.entities.sku) {
+          // Missing SKU - need to search for products first
+          const searchQuery = intent.entities.product || intent.entities.query || 'products';
+          return {
+            needsClarification: true,
+            pendingIntent: intent,
+            clarificationIntent: {
+              name: 'product_search',
+              entities: {
+                query: searchQuery,
+                attributes: intent.entities.attributes || {}
+              },
+              confidenceLevel: 'high'
+            },
+            message: `🔍 Please search for a product first, then select one to view details.`
+          };
+        }
+      }
+      
       // Check add_to_cart which requires SKU
       if (intent.name === 'add_to_cart' || intent.name === 'add_to_wishlist') {
         if (!intent.entities.sku) {
@@ -329,6 +403,122 @@ export default class ShopPilot {
   }
 
   /**
+   * Validate if required context is available for context-dependent intents
+   * Some intents (like add_to_cart with number selection) require previous context
+   */
+  validateContext(scoredIntents) {
+    // Hard-coded context requirements to avoid async loading issues
+    const CONTEXT_REQUIREMENTS = {
+      'select_product': ['product_search'],
+      'add_to_cart': ['product_search'],
+      'add_to_wishlist': ['product_search']
+    };
+    
+    for (const intent of scoredIntents) {
+      const requiredContexts = CONTEXT_REQUIREMENTS[intent.name];
+      
+      if (requiredContexts && requiredContexts.length > 0) {
+        console.log(`[ShopPilot] Checking context for ${intent.name}, requires:`, requiredContexts);
+        
+        // Check if context has expired
+        if (this.isContextExpired()) {
+          console.log('[ShopPilot] Context expired');
+          return {
+            needsClarification: true,
+            message: '⏰ Product context has expired. Please search for products again.',
+            suggestion: 'Try: "find shoes" or "search laptops"'
+          };
+        }
+        
+        // Check if any required context is present
+        const hasContext = requiredContexts.some(ctx => {
+          if (ctx === 'product_search') {
+            const hasProducts = this.conversationContext.lastProducts && 
+                   this.conversationContext.lastProducts.length > 0;
+            console.log(`[ShopPilot] Has product context (lastProducts.length): ${this.conversationContext.lastProducts?.length || 0}`);
+            return hasProducts;
+          }
+          return false;
+        });
+        
+        if (!hasContext) {
+          // Missing required context
+          const contextName = requiredContexts[0];
+          let message = '';
+          let suggestion = '';
+          
+          if (contextName === 'product_search') {
+            message = '🔍 Please search for products first before selecting one.';
+            suggestion = 'Try: "find blue shoes" or "search for laptops"';
+          } else {
+            message = `⚠️ This action requires ${contextName} context. Please perform ${contextName} first.`;
+          }
+          
+          console.log('[ShopPilot] Context validation failed:', message);
+          return {
+            needsClarification: true,
+            message,
+            suggestion
+          };
+        }
+        
+        console.log('[ShopPilot] Context validation passed for', intent.name);
+      }
+    }
+    
+    return { needsClarification: false };
+  }
+
+  /**
+   * Resolve product numbers (like "1", "2", "3") to actual SKUs from context
+   * When user says "show details of 1", map "1" to the first product SKU
+   */
+  resolveProductNumbers(scoredIntents, dlmOutput) {
+    // Safety check: dlmOutput might be undefined when using LLM path
+    if (!dlmOutput) {
+      return;
+    }
+    
+    // Only resolve for intents that work with products from context
+    const contextIntents = ['select_product', 'add_to_cart', 'add_to_wishlist'];
+    
+    for (const intent of scoredIntents) {
+      if (!contextIntents.includes(intent.name)) continue;
+      
+      // Check if we have numbers in the DLM output
+      if (!dlmOutput.numbers || dlmOutput.numbers.length === 0) continue;
+      
+      // Check if we have products in context
+      if (!this.conversationContext.lastProducts || 
+          this.conversationContext.lastProducts.length === 0) continue;
+      
+      // Find the first number that looks like a product position (1-based)
+      const productNumber = dlmOutput.numbers.find(n => {
+        const num = typeof n === 'number' ? n : parseInt(n, 10);
+        return num >= 1 && num <= this.conversationContext.lastProducts.length;
+      });
+      
+      if (productNumber) {
+        const index = typeof productNumber === 'number' ? productNumber : parseInt(productNumber, 10);
+        const selectedProduct = this.conversationContext.lastProducts[index - 1];
+        
+        if (selectedProduct && selectedProduct.sku) {
+          console.log(`[ShopPilot] Resolved product number ${index} to SKU: ${selectedProduct.sku}`);
+          
+          // Update entities with the actual SKU
+          intent.entities.sku = selectedProduct.sku;
+          intent.entities.product = selectedProduct.name || selectedProduct.title;
+          
+          // For add_to_cart, preserve quantity if it's different from the product number
+          if (intent.name === 'add_to_cart' && !intent.entities.quantity) {
+            intent.entities.quantity = 1; // Default to 1
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Build search query from entity attributes
    */
   buildSearchQuery(entities) {
@@ -340,6 +530,26 @@ export default class ShopPilot {
     }
     if (entities.product) parts.push(entities.product);
     return parts.join(' ') || 'products';
+  }
+
+  /**
+   * Clear product context
+   * Call this when starting a new conversation flow or after timeout
+   */
+  clearProductContext() {
+    this.conversationContext.lastProducts = [];
+    this.conversationContext.lastIntent = null;
+    this.conversationContext.contextTimestamp = null;
+    console.log('[ShopPilot] Product context cleared');
+  }
+
+  /**
+   * Check if product context has expired (older than 5 minutes)
+   */
+  isContextExpired() {
+    if (!this.conversationContext.contextTimestamp) return true;
+    const fiveMinutes = 5 * 60 * 1000;
+    return Date.now() - this.conversationContext.contextTimestamp > fiveMinutes;
   }
 
   /**

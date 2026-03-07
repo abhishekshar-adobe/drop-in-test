@@ -91,6 +91,9 @@ export default class Clarification {
       check_price: {
         product: "💰 Which product's price would you like to know?"
       },
+      select_product: {
+        sku: "📦 Which product SKU would you like to view?"
+      },
       track_order: {
         order_number: "📋 What's your order number?"
       }
@@ -108,6 +111,7 @@ export default class Clarification {
       add_to_cart: "🛒 Add to cart",
       add_to_wishlist: "❤️ Add to wishlist",
       check_price: "💰 Check price",
+      select_product: "📦 View product details",
       view_orders: "📦 View orders",
       track_order: "📍 Track an order",
       view_cart: "🛒 View cart",

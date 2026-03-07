@@ -14,7 +14,7 @@
   "intents": [
     {
       "name": "product_search",
-      "patterns": ["search", "find", "look for", "show me", "looking for","show"],
+      "patterns": ["search", "find", "look for", "looking for", "browse", "search for", "find me", "show", "show me", "display", "get me", "list"],
       "entities": ["product", "category", "attribute"],
       "requiredSlots": ["query"],
       "priority": 0.7,
@@ -25,6 +25,7 @@
       "patterns": ["add to cart", "add", "put in cart", "buy"],
       "entities": ["product", "quantity", "sku"],
       "requiredSlots": ["sku"],
+      "requiresContext": ["product_search"],
       "priority": 0.9,
       "confidenceThreshold": 0.75
     },
@@ -33,6 +34,7 @@
       "patterns": ["add to wishlist", "wishlist", "save", "favorite"],
       "entities": ["product", "sku"],
       "requiredSlots": ["sku"],
+      "requiresContext": ["product_search"],
       "priority": 0.85,
       "confidenceThreshold": 0.7
     },
@@ -43,6 +45,15 @@
       "requiredSlots": ["product"],
       "priority": 0.6,
       "confidenceThreshold": 0.5
+    },
+    {
+      "name": "select_product",
+      "patterns": ["select", "choose", "pick", "show details", "details of", "details for", "tell me about", "more about", "info about", "information about", "view product", "view details", "show info"],
+      "entities": ["product", "sku"],
+      "requiredSlots": ["sku"],
+      "requiresContext": ["product_search"],
+      "priority": 0.85,
+      "confidenceThreshold": 0.6
     },
     {
       "name": "view_orders",
@@ -62,7 +73,7 @@
     },
     {
       "name": "view_cart",
-      "patterns": ["cart", "shopping cart", "my cart", "what's in cart"],
+      "patterns": ["cart", "shopping cart", "my cart", "what's in cart", "show cart", "view cart", "see cart"],
       "entities": [],
       "requiredSlots": [],
       "priority": 0.8,
