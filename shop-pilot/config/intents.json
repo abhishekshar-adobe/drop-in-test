@@ -56,6 +56,15 @@
       "confidenceThreshold": 0.6
     },
     {
+      "name": "compare_products",
+      "patterns": ["compare", "compare with", "comparison", "versus", "vs", "difference between", "compare products", "compare items", "side by side"],
+      "entities": ["sku1", "sku2"],
+      "requiredSlots": ["sku1", "sku2"],
+      "requiresContext": ["product_search"],
+      "priority": 0.85,
+      "confidenceThreshold": 0.65
+    },
+    {
       "name": "view_orders",
       "patterns": ["my orders", "order history", "past orders", "show orders", "view orders", "recent orders", "list orders", "all orders"],
       "entities": [],

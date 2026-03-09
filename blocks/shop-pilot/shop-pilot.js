@@ -1,6 +1,7 @@
 import ShopPilot from '../../shop-pilot/src/index.js';
 import ProductListUI from '../../shop-pilot/src/components/ProductListUI.js';
 import ProductDetailUI from '../../shop-pilot/src/components/ProductDetailUI.js';
+import CompareProductsUI from '../../shop-pilot/src/components/CompareProductsUI.js';
 import OrderListUI from '../../shop-pilot/src/components/OrderListUI.js';
 import CartUI from '../../shop-pilot/src/components/CartUI.js';
 
@@ -357,6 +358,15 @@ function initChatbot(block, shopPilot) {
           if (response.message) {
             addMessage(response.message, 'bot');
           }
+        } else if (response.displayAs === 'ui' && (response.intent === 'compare_products' || response.action === 'compare_products')) {
+          // Render product comparison UI
+          const compareData = response.data || null;
+          renderCompareProductsUI(compareData);
+          
+          // If there's a message, show it
+          if (response.message) {
+            addMessage(response.message, 'bot');
+          }
         } else if (response.displayAs === 'ui' && (response.intent === 'view_orders' || response.action === 'view_orders')) {
           // Render order list UI
           console.log('[ShopPilot] Rendering order list UI with data:', response.data);
@@ -475,6 +485,25 @@ function initChatbot(block, shopPilot) {
     
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message bot-message product-detail-ui-message';
+    messageDiv.innerHTML = `
+      <div class="message-content">
+      </div>
+    `;
+    messageDiv.querySelector('.message-content').appendChild(container);
+    
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+  }
+
+  // Render CompareProductsUI component
+  function renderCompareProductsUI(compareData) {
+    const container = document.createElement('div');
+    container.className = 'compare-products-container';
+    
+    CompareProductsUI.render(container, compareData);
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message compare-products-ui-message';
     messageDiv.innerHTML = `
       <div class="message-content">
       </div>

@@ -160,6 +160,24 @@ export default class IntentDetector {
                                 /\bdetails?\s+(of|for|about|on)/i.test(dlmOutput.originalText);
     const isNumberSelection = hasNumber && hasSelectionPattern;
     
+    // Comparison-aware scoring: Check for comparison patterns with two items
+    const hasComparisonPattern = /\b(compare|comparison|versus|vs|difference\s+between)\b/i.test(dlmOutput.originalText);
+    const hasTwoNumbers = dlmOutput.numbers && dlmOutput.numbers.length >= 2;
+    const hasTwoSKUs = (dlmOutput.originalText.match(/\b[A-Z]{3,4}\d{3,4}\b/gi) || []).length >= 2;
+    const hasAndConnector = /\band\b|\bwith\b/i.test(dlmOutput.originalText);
+    const isComparison = hasComparisonPattern && (hasTwoNumbers || hasTwoSKUs || hasAndConnector);
+    
+    if (isComparison) {
+      console.log(`[IntentDetector] Comparison detected: "${dlmOutput.originalText}"`);
+      if (intentDef.name === 'compare_products') {
+        score += 3.5; // Major boost for compare_products when comparison detected
+        console.log(`[IntentDetector] Boosting compare_products score by 3.5`);
+      } else if (intentDef.name === 'select_product' || intentDef.name === 'product_search') {
+        score -= 2.0; // Penalize other intents when comparison detected
+        console.log(`[IntentDetector] Penalizing ${intentDef.name} score by -2.0`);
+      }
+    }
+    
     if (hasSKU) {
       console.log(`[IntentDetector] SKU detected in input: "${dlmOutput.originalText}"`);
       // SKU detected - strongly favor select_product over product_search
@@ -267,6 +285,39 @@ export default class IntentDetector {
       entities.product = dlmOutput.entities.products[0] || null;
       entities.attributes = normalizedAttributes;
       console.log('[IntentDetector] Extracted entities for select_product:', entities);
+      
+    } else if (intentDef.name === 'compare_products') {
+      // Extract two SKUs for comparison
+      console.log('[IntentDetector] DLM output for compare_products:', {
+        skus: dlmOutput.entities?.skus,
+        numbers: dlmOutput.numbers,
+        originalText: dlmOutput.originalText
+      });
+      
+      // Extract SKUs from DLM entities (if available)
+      const dlmSkus = dlmOutput.entities?.skus || [];
+      
+      // Also check for SKU patterns in text
+      const skuMatches = (dlmOutput.originalText.match(/\b[A-Z]{3,4}\d{3,4}\b/gi) || []);
+      
+      // Combine and get unique SKUs
+      const allSkus = [...new Set([...dlmSkus, ...skuMatches])];
+      
+      if (allSkus.length >= 2) {
+        // Two explicit SKUs found
+        entities.sku1 = allSkus[0];
+        entities.sku2 = allSkus[1];
+      } else if (dlmOutput.numbers && dlmOutput.numbers.length >= 2) {
+        // Two numbers found (product positions like "compare 1 and 2")
+        entities.sku1 = dlmOutput.numbers[0];
+        entities.sku2 = dlmOutput.numbers[1];
+      } else if (allSkus.length === 1 && dlmOutput.numbers && dlmOutput.numbers.length >= 1) {
+        // Mix of SKU and number
+        entities.sku1 = allSkus[0];
+        entities.sku2 = dlmOutput.numbers[0];
+      }
+      
+      console.log('[IntentDetector] Extracted entities for compare_products:', entities);
       
     } else if (intentDef.name === 'check_price') {
       entities.product = dlmOutput.entities.products[0] || dlmOutput.nouns[0];

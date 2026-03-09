@@ -410,8 +410,7 @@ export default class ShopPilot {
     // Hard-coded context requirements to avoid async loading issues
     const CONTEXT_REQUIREMENTS = {
       'select_product': ['product_search'],
-      'add_to_cart': ['product_search'],
-      'add_to_wishlist': ['product_search']
+    'compare_products': ['product_search'],
     };
     
     for (const intent of scoredIntents) {
@@ -472,6 +471,7 @@ export default class ShopPilot {
   /**
    * Resolve product numbers (like "1", "2", "3") to actual SKUs from context
    * When user says "show details of 1", map "1" to the first product SKU
+   * When user says "compare 1 and 2", map both to respective SKUs
    */
   resolveProductNumbers(scoredIntents, dlmOutput) {
     // Safety check: dlmOutput might be undefined when using LLM path
@@ -480,7 +480,7 @@ export default class ShopPilot {
     }
     
     // Only resolve for intents that work with products from context
-    const contextIntents = ['select_product', 'add_to_cart', 'add_to_wishlist'];
+    const contextIntents = ['select_product', 'compare_products', 'add_to_cart', 'add_to_wishlist'];
     
     for (const intent of scoredIntents) {
       if (!contextIntents.includes(intent.name)) continue;
@@ -492,6 +492,66 @@ export default class ShopPilot {
       if (!this.conversationContext.lastProducts || 
           this.conversationContext.lastProducts.length === 0) continue;
       
+      // Handle compare_products - needs two numbers/SKUs
+      if (intent.name === 'compare_products') {
+        // First, check if sku1 or sku2 are already set but are numeric strings that need resolution
+        const needsResolution1 = intent.entities.sku1 && this.isProductPosition(intent.entities.sku1);
+        const needsResolution2 = intent.entities.sku2 && this.isProductPosition(intent.entities.sku2);
+        
+        if (needsResolution1) {
+          const index1 = parseInt(intent.entities.sku1, 10);
+          if (index1 >= 1 && index1 <= this.conversationContext.lastProducts.length) {
+            const product1 = this.conversationContext.lastProducts[index1 - 1];
+            if (product1 && product1.sku) {
+              console.log(`[ShopPilot] Resolved sku1 position ${index1} to SKU: ${product1.sku}`);
+              intent.entities.sku1 = product1.sku;
+            }
+          }
+        }
+        
+        if (needsResolution2) {
+          const index2 = parseInt(intent.entities.sku2, 10);
+          if (index2 >= 1 && index2 <= this.conversationContext.lastProducts.length) {
+            const product2 = this.conversationContext.lastProducts[index2 - 1];
+            if (product2 && product2.sku) {
+              console.log(`[ShopPilot] Resolved sku2 position ${index2} to SKU: ${product2.sku}`);
+              intent.entities.sku2 = product2.sku;
+            }
+          }
+        }
+        
+        // Also handle the case where both come from dlmOutput.numbers (not already set)
+        if (!intent.entities.sku1 || !intent.entities.sku2) {
+          const numbers = dlmOutput.numbers.filter(n => {
+            const num = typeof n === 'number' ? n : parseInt(n, 10);
+            return num >= 1 && num <= this.conversationContext.lastProducts.length;
+          });
+          
+          if (numbers.length >= 2) {
+            if (!intent.entities.sku1) {
+              const index1 = typeof numbers[0] === 'number' ? numbers[0] : parseInt(numbers[0], 10);
+              const product1 = this.conversationContext.lastProducts[index1 - 1];
+              if (product1 && product1.sku) {
+                console.log(`[ShopPilot] Resolved product number ${index1} to SKU: ${product1.sku}`);
+                intent.entities.sku1 = product1.sku;
+              }
+            }
+            
+            if (!intent.entities.sku2) {
+              const index2 = typeof numbers[1] === 'number' ? numbers[1] : parseInt(numbers[1], 10);
+              const product2 = this.conversationContext.lastProducts[index2 - 1];
+              if (product2 && product2.sku) {
+                console.log(`[ShopPilot] Resolved product number ${index2} to SKU: ${product2.sku}`);
+                intent.entities.sku2 = product2.sku;
+              }
+            }
+          }
+        }
+        
+        continue; // Done with compare_products
+      }
+      
+      // Handle single product intents (select_product, add_to_cart, add_to_wishlist)
       // Find the first number that looks like a product position (1-based)
       const productNumber = dlmOutput.numbers.find(n => {
         const num = typeof n === 'number' ? n : parseInt(n, 10);
@@ -516,6 +576,19 @@ export default class ShopPilot {
         }
       }
     }
+  }
+
+  /**
+   * Check if a value is a product position number (1, 2, 3) vs a SKU code
+   * @param {string} value - The value to check
+   * @returns {boolean} True if it's a simple position number
+   */
+  isProductPosition(value) {
+    if (!value) return false;
+    // If it's a simple 1-2 digit number, it's likely a position
+    // If it contains letters or is a longer number, it's likely a SKU
+    const str = String(value);
+    return /^\d{1,2}$/.test(str);
   }
 
   /**

@@ -92,6 +92,10 @@ export default class ActionExecutor {
         result = await this.handleSelectProduct(intent.entities);
         break;
       
+      case 'compare_products':
+        result = await this.handleCompareProducts(intent.entities);
+        break;
+      
       case 'view_orders':
         result = await this.handleViewOrders();
         break;
@@ -308,6 +312,86 @@ export default class ActionExecutor {
         success: false,
         intent: 'select_product',
         message: `❌ Failed to fetch product details: ${error.message}`,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Handle compare products - fetch data for two products and display comparison
+   * @param {Object} entities - Contains sku1 and sku2
+   * @returns {Promise<Object>} Result with both product data for comparison
+   */
+  async handleCompareProducts(entities) {
+    try {
+      console.log('[Executor] handleCompareProducts called with entities:', entities);
+      
+      if (!entities.sku1 || !entities.sku2) {
+        console.log('[Executor] Missing SKUs for comparison:', { sku1: entities.sku1, sku2: entities.sku2 });
+        return {
+          success: false,
+          intent: 'compare_products',
+          message: '❌ Please provide two product SKUs to compare (e.g., "compare 1 and 2")'
+        };
+      }
+
+      console.log(`[Executor] Fetching product data for comparison: ${entities.sku1} and ${entities.sku2}`);
+      
+      // Fetch both products in parallel
+      const [product1Data, product2Data] = await Promise.all([
+        this.api.fetchProductData(entities.sku1),
+        this.api.fetchProductData(entities.sku2)
+      ]);
+      
+      console.log('[Executor] Product 1 data received:', product1Data);
+      console.log('[Executor] Product 2 data received:', product2Data);
+      
+      if (!product1Data && !product2Data) {
+        console.log('[Executor] Both products not found');
+        return {
+          success: false,
+          intent: 'compare_products',
+          message: `❌ Neither product found: "${entities.sku1}" and "${entities.sku2}"`
+        };
+      }
+      
+      if (!product1Data) {
+        console.log('[Executor] First product not found:', entities.sku1);
+        return {
+          success: false,
+          intent: 'compare_products',
+          message: `❌ First product not found: "${entities.sku1}"`
+        };
+      }
+      
+      if (!product2Data) {
+        console.log('[Executor] Second product not found:', entities.sku2);
+        return {
+          success: false,
+          intent: 'compare_products',
+          message: `❌ Second product not found: "${entities.sku2}"`
+        };
+      }
+
+      console.log('[Executor] Both products fetched successfully, preparing comparison');
+
+      // Return both products for comparison view
+      return {
+        success: true,
+        intent: 'compare_products',
+        message: `⚖️ Comparing ${product1Data.name || entities.sku1} vs ${product2Data.name || entities.sku2}`,
+        data: {
+          product1: product1Data,
+          product2: product2Data
+        },
+        displayAs: 'ui' // Render as UI component (CompareProductsUI)
+      };
+    } catch (error) {
+      console.error('[Executor] handleCompareProducts failed:', error);
+      return {
+        success: false,
+        intent: 'compare_products',
+        message: `❌ Failed to compare products: ${error.message}`,
         error: error.message
       };
     }

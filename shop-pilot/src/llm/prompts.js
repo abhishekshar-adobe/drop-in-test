@@ -22,6 +22,7 @@ Given a user message, output **only** a JSON object (no markdown, no explanation
 | add_to_wishlist    | Save a product to wishlist                     | sku (if known), product         |
 | check_price        | Ask about a product's price                    | product                         |
 | select_product     | View product details (requires number/SKU)     | sku                             |
+| compare_products   | Compare two products side by side              | sku1, sku2                      |
 | view_orders        | View order history / list orders               | (none)                          |
 | track_order        | Track a specific order                         | order_number                    |
 | view_cart          | View current cart contents                     | (none)                          |
@@ -100,10 +101,10 @@ Return ONLY valid JSON. No markdown code fences. No extra text.
 1. Detect up to 2 intents if the query clearly expresses multiple actions.
 2. Assign confidence from 0.0 to 1.0 — 1.0 means absolutely certain.
 3. Correct typos and informal language when extracting entities.
-4. **CRITICAL:** If the query contains ANY number or SKU code, use select_product (NOT product_search). Set the sku entity to that number/code.
+4. **CRITICAL:** If the query contains ANY number or SKU code for a SINGLE product, use select_product. If it contains TWO numbers/SKUs with comparison words (compare, versus, vs), use compare_products.
 5. Never invent SKUs yourself — only extract them if the user explicitly provided one.
 6. For analytics_query, set query to the full user text.
-7. Position numbers (1, 2, 3...) should be treated as SKU references for select_product intent.`;
+7. Position numbers (1, 2, 3...) should be treated as SKU references for select_product or compare_products intents depending on context.`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. FEW-SHOT EXAMPLES for input processing
@@ -412,6 +413,56 @@ export const INPUT_FEW_SHOT_EXAMPLES = [
           entities: {
             product: null,
             sku: '5',
+            quantity: null,
+            order_number: null,
+            reason: null,
+            query: null,
+            attributes: { color: null, size: null, material: null },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'compare 1 and 2',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'compare_products',
+          confidence: 0.98,
+          entities: {
+            sku1: '1',
+            sku2: '2',
+            product: null,
+            quantity: null,
+            order_number: null,
+            reason: null,
+            query: null,
+            attributes: { color: null, size: null, material: null },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'compare ADB386 with WSH12',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'compare_products',
+          confidence: 0.99,
+          entities: {
+            sku1: 'ADB386',
+            sku2: 'WSH12',
+            product: null,
             quantity: null,
             order_number: null,
             reason: null,
