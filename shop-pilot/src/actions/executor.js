@@ -596,7 +596,34 @@ export default class ActionExecutor {
    */
   async handleResetCart() {
     try {
-      const result = await this.api.resetCart();
+      // Get current cart data
+      const cart = await this.api.getCart();
+      
+      // Check if cart is already empty
+      if (!cart || !cart.items || cart.items.length === 0) {
+        return {
+          success: true,
+          intent: 'reset_cart',
+          message: '🗑️ Your cart is already empty!',
+          data: cart
+        };
+      }
+      
+      // Import updateProductsFromCart from storefront-cart API
+      const { updateProductsFromCart } = await import('../../../scripts/__dropins__/storefront-cart/api.js');
+      
+      // Build array of cart items with quantity: 0 to remove all items
+      const itemsToRemove = cart.items.map(item => ({
+        uid: item.uid,
+        quantity: 0
+      }));
+      
+      console.log('[Executor] Clearing cart items:', itemsToRemove);
+      
+      // Clear all items by setting quantity to 0
+      const result = await updateProductsFromCart(itemsToRemove);
+      
+      console.log('[Executor] Cart cleared successfully:', result);
       
       return {
         success: true,
