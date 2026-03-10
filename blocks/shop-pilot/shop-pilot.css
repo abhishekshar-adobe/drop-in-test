@@ -409,13 +409,13 @@
 }
 
 .shop-pilot .voice-btn.recording {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
   color: white;
   animation: pulse-recording 1.5s infinite;
 }
 
 .shop-pilot .voice-btn.recording:hover {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, #16a085 0%, #0e8c75 100%);
   color: white;
 }
 
@@ -425,7 +425,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(26, 188, 156, 0.3);
   animation: ripple 1.5s infinite;
 }
 
@@ -478,6 +478,210 @@
 
 .shop-pilot .voice-btn.recording::after {
   content: 'Click to stop';
+}
+
+/* Recording Active Animations */
+/* Messages Container Recording State */
+.shop-pilot .chatbot-messages.recording-active {
+  background: linear-gradient(135deg, #e0f7f4 0%, #d4f4f0 50%, #e0f7f4 100%) !important;
+  background-size: 200% 200% !important;
+  animation: gradient-shift 3s ease infinite !important;
+  border: 2px solid rgba(26, 188, 156, 0.3) !important;
+  position: relative !important;
+  z-index: 1 !important;
+  overflow: hidden !important;
+}
+
+/* Siri-style Central Orb with Expanding Waves */
+.shop-pilot .chatbot-messages.recording-active::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 80px !important;
+  height: 80px !important;
+  background: radial-gradient(circle, rgba(26, 188, 156, 0.8) 0%, rgba(26, 188, 156, 0.4) 30%, transparent 70%) !important;
+  border-radius: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  animation: siri-pulse 2s ease-in-out infinite !important;
+  box-shadow: 
+    0 0 20px rgba(26, 188, 156, 0.6),
+    0 0 40px rgba(26, 188, 156, 0.4),
+    0 0 60px rgba(26, 188, 156, 0.2),
+    inset 0 0 20px rgba(26, 188, 156, 0.3) !important;
+  z-index: 998 !important;
+  pointer-events: none !important;
+}
+
+/* Animated Sound Wave Bars - Google Style */
+.shop-pilot .chatbot-messages.recording-active::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 200px !important;
+  height: 80px !important;
+  background: 
+    linear-gradient(to top, #1abc9c 0%, transparent 100%),
+    linear-gradient(to top, #16a085 0%, transparent 100%),
+    linear-gradient(to top, #1abc9c 0%, transparent 100%),
+    linear-gradient(to top, #0e8c75 0%, transparent 100%),
+    linear-gradient(to top, #1abc9c 0%, transparent 100%),
+    linear-gradient(to top, #16a085 0%, transparent 100%),
+    linear-gradient(to top, #1abc9c 0%, transparent 100%),
+    linear-gradient(to top, #0e8c75 0%, transparent 100%),
+    linear-gradient(to top, #1abc9c 0%, transparent 100%) !important;
+  background-size: 6px 30%, 6px 60%, 6px 45%, 6px 80%, 6px 50%, 6px 70%, 6px 40%, 6px 65%, 6px 55% !important;
+  background-position: 
+    0px 100%, 22px 100%, 44px 100%, 66px 100%, 88px 100%, 
+    110px 100%, 132px 100%, 154px 100%, 176px 100% !important;
+  background-repeat: no-repeat !important;
+  animation: google-wave 0.6s ease-in-out infinite !important;
+  opacity: 0.8 !important;
+  z-index: 999 !important;
+  pointer-events: none !important;
+}
+
+/* Window Glow Effect */
+.shop-pilot .chatbot-window.recording-active {
+  box-shadow: 
+    0 0 0 3px rgba(26, 188, 156, 0.3),
+    0 0 0 6px rgba(26, 188, 156, 0.2),
+    0 0 0 9px rgba(26, 188, 156, 0.1),
+    0 20px 60px rgba(26, 188, 156, 0.25) !important;
+  animation: window-glow-pulse 2s ease-in-out infinite !important;
+}
+
+/* Header Recording State */
+.shop-pilot .chatbot-header.recording-active {
+  background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%) !important;
+  animation: pulse-overlay 1.5s ease-in-out infinite !important;
+}
+
+/* Status Indicator During Recording */
+.shop-pilot .chatbot-header.recording-active .status-indicator {
+  background: #10b981 !important;
+  animation: pulse-fast 0.8s infinite !important;
+}
+
+/* Keyframe Animations */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Siri-style pulsing orb animation */
+@keyframes siri-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    box-shadow: 
+      0 0 20px rgba(26, 188, 156, 0.6),
+      0 0 40px rgba(26, 188, 156, 0.4),
+      0 0 60px rgba(26, 188, 156, 0.2),
+      0 0 80px rgba(26, 188, 156, 0.1),
+      inset 0 0 20px rgba(26, 188, 156, 0.3);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0.8;
+    box-shadow: 
+      0 0 30px rgba(26, 188, 156, 0.8),
+      0 0 60px rgba(26, 188, 156, 0.6),
+      0 0 90px rgba(26, 188, 156, 0.4),
+      0 0 120px rgba(26, 188, 156, 0.2),
+      inset 0 0 30px rgba(26, 188, 156, 0.5);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    box-shadow: 
+      0 0 20px rgba(26, 188, 156, 0.6),
+      0 0 40px rgba(26, 188, 156, 0.4),
+      0 0 60px rgba(26, 188, 156, 0.2),
+      0 0 80px rgba(26, 188, 156, 0.1),
+      inset 0 0 20px rgba(26, 188, 156, 0.3);
+  }
+}
+
+/* Google Assistant style wave bars */
+@keyframes google-wave {
+  0% {
+    background-size: 6px 30%, 6px 60%, 6px 45%, 6px 80%, 6px 50%, 6px 70%, 6px 40%, 6px 65%, 6px 55%;
+  }
+  25% {
+    background-size: 6px 50%, 6px 40%, 6px 75%, 6px 55%, 6px 80%, 6px 45%, 6px 70%, 6px 35%, 6px 60%;
+  }
+  50% {
+    background-size: 6px 70%, 6px 30%, 6px 60%, 6px 45%, 6px 75%, 6px 55%, 6px 50%, 6px 80%, 6px 40%;
+  }
+  75% {
+    background-size: 6px 45%, 6px 75%, 6px 40%, 6px 70%, 6px 50%, 6px 80%, 6px 35%, 6px 60%, 6px 65%;
+  }
+  100% {
+    background-size: 6px 30%, 6px 60%, 6px 45%, 6px 80%, 6px 50%, 6px 70%, 6px 40%, 6px 65%, 6px 55%;
+  }
+}
+
+@keyframes window-glow-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 3px rgba(26, 188, 156, 0.3),
+      0 0 0 6px rgba(26, 188, 156, 0.2),
+      0 0 0 9px rgba(26, 188, 156, 0.1),
+      0 20px 60px rgba(26, 188, 156, 0.25);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 3px rgba(26, 188, 156, 0.5),
+      0 0 0 6px rgba(26, 188, 156, 0.3),
+      0 0 0 9px rgba(26, 188, 156, 0.2),
+      0 20px 60px rgba(26, 188, 156, 0.4);
+  }
+}
+
+@keyframes pulse-overlay {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes pulse-fast {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+/* Expanding circular waves animation (Siri-style) */
+@keyframes expand-wave {
+  0% {
+    width: 30px;
+    height: 30px;
+    opacity: 1;
+    border-width: 3px;
+  }
+  100% {
+    width: 300px;
+    height: 300px;
+    opacity: 0;
+    border-width: 1px;
+  }
 }
 
 /* Typing Indicator */

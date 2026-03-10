@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Test</title>
+  <link rel="stylesheet" href="blocks/chatbot/chatbot.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .instructions {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .instructions h2 {
+      margin-top: 0;
+      color: #667eea;
+    }
+    .instructions ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .instructions li {
+      margin: 8px 0;
+    }
+    .console-log {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎤 Voice Recording Animation Test</h1>
+    
+    <div class="instructions">
+      <h2>Instructions:</h2>
+      <ol>
+        <li><strong>Open Browser Console:</strong> Press F12 (or Cmd+Option+I on Mac)</li>
+        <li><strong>Look for initialization logs</strong> - You should see:
+          <ul>
+            <li>"Chatbot decorate function called"</li>
+            <li>"Chatbot HTML set, initializing..."</li>
+            <li>"Chatbot initialized: {voiceBtn: 'found', ...}"</li>
+            <li>"Voice button click handler attached"</li>
+          </ul>
+        </li>
+        <li><strong>Click the chatbot button</strong> (bottom-right corner) to open the chat window</li>
+        <li><strong>Click the microphone button</strong> (🎤 icon) in the input area</li>
+        <li><strong>Allow microphone access</strong> when prompted by your browser</li>
+        <li><strong>Observe the animations:</strong>
+          <ul>
+            <li>Red pulsing glow around the chat window</li>
+            <li>Red gradient background in the header</li>
+            <li>Pink animated gradient in the messages area</li>
+            <li>"🎤 RECORDING" badge bouncing at the top of messages</li>
+            <li>Red border around messages area</li>
+            <li>Multiple rippling circles and sound waves around the microphone button</li>
+          </ul>
+        </li>
+        <li><strong>Check console for:</strong>
+          <ul>
+            <li>"Voice button clicked! isRecording: false"</li>
+            <li>"startRecording called"</li>
+            <li>"Recording started - Classes added: {...}"</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+
+    <div class="console-log">
+      <strong>Expected Console Output:</strong><br>
+      → Chatbot decorate function called<br>
+      → Chatbot HTML set, initializing...<br>
+      → Chatbot initialized: {voiceBtn: 'found', chatWindow: 'found', ...}<br>
+      → Voice button click handler attached<br>
+      <br>
+      <em>After clicking voice button:</em><br>
+      → Voice button clicked! isRecording: false<br>
+      → startRecording called<br>
+      → Initializing speech recognition...<br>
+      → Starting recognition...<br>
+      → Recording started - Classes added: {...}<br>
+    </div>
+  </div>
+
+  <!-- Chatbot Block -->
+  <div class="block chatbot"></div>
+
+  <script type="module">
+    // Import and initialize the chatbot
+    import decorate from './blocks/chatbot/chatbot.js';
+    
+    const chatbotBlock = document.querySelector('.block.chatbot');
+    console.log('Test page loaded, initializing chatbot...');
+    
+    if (chatbotBlock) {
+      decorate(chatbotBlock);
+    } else {
+      console.error('Chatbot block element not found!');
+    }
+  </script>
+</body>
+</html>

@@ -165,37 +165,161 @@ function initChatbot(block, shopPilot) {
   const quickReplies = block.querySelectorAll('.quick-reply');
   const typingIndicator = block.querySelector('.typing-indicator');
   
+  // Additional elements for recording animations
+  const chatWindow = block.querySelector('.chatbot-window');
+  const header = block.querySelector('.chatbot-header');
+  
   // Store current product list for number-based selection
   let currentProducts = [];
   
   // Voice recognition state
   let isRecording = false;
   let recognition = null;
+  let waveInterval = null;
+
+  // Create Siri-style expanding circular waves
+  function createExpandingWaves() {
+    // Remove any existing waves first
+    removeExpandingWaves();
+    
+    // Create floating particles around the orb
+    for (let i = 0; i < 8; i += 1) {
+      const particle = document.createElement('div');
+      particle.className = 'voice-recording-particle';
+      const angle = (i / 8) * 2 * Math.PI;
+      const distance = 60 + Math.random() * 40;
+      const x1 = Math.cos(angle) * distance;
+      const y1 = Math.sin(angle) * distance;
+      const x2 = Math.cos(angle) * distance * 1.3;
+      const y2 = Math.sin(angle) * distance * 1.3;
+      
+      particle.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 8px;
+        height: 8px;
+        background: radial-gradient(circle, rgba(26, 188, 156, 1) 0%, rgba(26, 188, 156, 0.5) 100%);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 996;
+        animation: float-particle-${i} ${2 + Math.random()}s ease-in-out infinite;
+      `;
+      
+      // Add dynamic keyframe animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes float-particle-${i} {
+          0%, 100% {
+            transform: translate(calc(-50% + ${x1}px), calc(-50% + ${y1}px)) scale(1);
+            opacity: 0.6;
+          }
+          50% {
+            transform: translate(calc(-50% + ${x2}px), calc(-50% + ${y2}px)) scale(1.5);
+            opacity: 1;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+      messagesContainer.appendChild(particle);
+    }
+    
+    // Create waves periodically
+    waveInterval = setInterval(() => {
+      if (!isRecording) {
+        clearInterval(waveInterval);
+        return;
+      }
+      
+      const wave = document.createElement('div');
+      wave.className = 'voice-recording-wave';
+      wave.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 30px;
+        height: 30px;
+        border: 2px solid rgba(26, 188, 156, 0.6);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 997;
+        animation: expand-wave 2s ease-out forwards;
+      `;
+      
+      messagesContainer.appendChild(wave);
+      
+      // Remove wave after animation completes
+      setTimeout(() => {
+        if (wave.parentNode) {
+          wave.parentNode.removeChild(wave);
+        }
+      }, 2000);
+    }, 400);
+  }
+
+  // Remove all expanding waves
+  function removeExpandingWaves() {
+    if (waveInterval) {
+      clearInterval(waveInterval);
+      waveInterval = null;
+    }
+    const waves = messagesContainer.querySelectorAll('.voice-recording-wave');
+    waves.forEach((wave) => wave.remove());
+    
+    const particles = messagesContainer.querySelectorAll('.voice-recording-particle');
+    particles.forEach((particle) => particle.remove());
+  }
 
   // Initialize Speech Recognition
   function initSpeechRecognition() {
+    console.log('[Voice Recording] Initializing speech recognition...');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
-      console.warn('Speech recognition not supported in this browser');
+      console.warn('[Voice Recording] Speech recognition not supported in this browser');
       if (voiceBtn) voiceBtn.style.display = 'none';
       return null;
     }
 
+    console.log('[Voice Recording] Speech recognition API found, creating instance...');
     const speechRecognition = new SpeechRecognition();
     speechRecognition.continuous = false;
     speechRecognition.interimResults = true;
     speechRecognition.lang = 'en-US';
+    console.log('[Voice Recording] Speech recognition configured:', {
+      continuous: false,
+      interimResults: true,
+      lang: 'en-US'
+    });
 
     speechRecognition.onstart = () => {
+      console.log('[Voice Recording] Recording started');
       isRecording = true;
       voiceBtn.classList.add('recording');
       voiceBtn.querySelector('.mic-icon').style.display = 'none';
       voiceBtn.querySelector('.mic-off-icon').style.display = 'block';
       input.placeholder = 'Listening...';
+      
+      // Add recording-active animations
+      console.log('[Voice Recording] Adding recording-active classes to chat elements');
+      chatWindow.classList.add('recording-active');
+      messagesContainer.classList.add('recording-active');
+      header.classList.add('recording-active');
+      
+      // Add Siri-style expanding circular waves
+      createExpandingWaves();
+      
+      // Update status text
+      const statusText = header.querySelector('.chatbot-status');
+      if (statusText) {
+        statusText.innerHTML = '<span class="status-indicator"></span>🎤 Recording...';
+      }
     };
 
     speechRecognition.onresult = (event) => {
+      console.log('[Voice Recording] Speech result received:', event);
       let interimTranscript = '';
       let finalTranscript = '';
 
@@ -203,8 +327,10 @@ function initChatbot(block, shopPilot) {
         const { transcript } = event.results[i][0];
         if (event.results[i].isFinal) {
           finalTranscript += transcript;
+          console.log('[Voice Recording] Final transcript:', finalTranscript);
         } else {
           interimTranscript += transcript;
+          console.log('[Voice Recording] Interim transcript:', interimTranscript);
         }
       }
 
@@ -213,6 +339,7 @@ function initChatbot(block, shopPilot) {
 
       // Auto-send when final result is received
       if (finalTranscript) {
+        console.log('[Voice Recording] Auto-sending final transcript:', finalTranscript);
         setTimeout(() => {
           sendMessage(finalTranscript);
         }, 500);
@@ -220,12 +347,14 @@ function initChatbot(block, shopPilot) {
     };
 
     speechRecognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
+      console.error('[Voice Recording] Speech recognition error:', event.error, event);
       stopRecording();
       
       if (event.error === 'not-allowed') {
+        console.warn('[Voice Recording] Microphone access denied');
         addMessage('Microphone access denied. Please allow microphone access to use voice search.', 'bot');
       } else if (event.error === 'no-speech') {
+        console.warn('[Voice Recording] No speech detected');
         input.placeholder = 'No speech detected. Try again...';
         setTimeout(() => {
           input.placeholder = 'Type your message...';
@@ -234,6 +363,7 @@ function initChatbot(block, shopPilot) {
     };
 
     speechRecognition.onend = () => {
+      console.log('[Voice Recording] Speech recognition ended');
       stopRecording();
     };
 
@@ -241,19 +371,25 @@ function initChatbot(block, shopPilot) {
   }
 
   function startRecording() {
+    console.log('[Voice Recording] startRecording called');
     if (!recognition) {
+      console.log('[Voice Recording] Recognition not initialized, initializing now...');
       recognition = initSpeechRecognition();
     }
     if (recognition) {
       try {
+        console.log('[Voice Recording] Starting speech recognition...');
         recognition.start();
       } catch (e) {
-        console.error('Error starting recognition:', e);
+        console.error('[Voice Recording] Error starting recognition:', e);
       }
+    } else {
+      console.error('[Voice Recording] Recognition is null, cannot start');
     }
   }
 
   function stopRecording() {
+    console.log('[Voice Recording] Stopping recording');
     isRecording = false;
     if (voiceBtn) {
       voiceBtn.classList.remove('recording');
@@ -262,6 +398,22 @@ function initChatbot(block, shopPilot) {
       if (micIcon) micIcon.style.display = 'block';
       if (micOffIcon) micOffIcon.style.display = 'none';
     }
+    
+    // Remove recording-active animations
+    console.log('[Voice Recording] Removing recording-active classes from chat elements');
+    chatWindow.classList.remove('recording-active');
+    messagesContainer.classList.remove('recording-active');
+    header.classList.remove('recording-active');
+    
+    // Remove expanding waves
+    removeExpandingWaves();
+    
+    // Restore status text
+    const statusText = header.querySelector('.chatbot-status');
+    if (statusText) {
+      statusText.innerHTML = '<span class="status-indicator"></span>Online';
+    }
+    
     input.placeholder = 'Type your message...';
     if (recognition) {
       try {
@@ -274,13 +426,22 @@ function initChatbot(block, shopPilot) {
 
   // Voice button click handler
   if (voiceBtn) {
-    voiceBtn.addEventListener('click', () => {
+    console.log('[Voice Button] Voice button found, attaching click handler');
+    voiceBtn.addEventListener('click', (e) => {
+      console.log('[Voice Button] Voice button clicked, isRecording:', isRecording);
+      e.preventDefault();
+      e.stopPropagation();
+      
       if (isRecording) {
+        console.log('[Voice Button] Stopping recording...');
         stopRecording();
       } else {
+        console.log('[Voice Button] Starting recording...');
         startRecording();
       }
     });
+  } else {
+    console.warn('[Voice Button] Voice button not found in DOM');
   }
 
   // Initialize speech recognition on load

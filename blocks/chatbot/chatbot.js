@@ -1,4 +1,6 @@
 export default function decorate(block) {
+  console.log('Chatbot decorate function called');
+  
   // Create chatbot container structure
   const chatbotHTML = `
     <div class="chatbot-container">
@@ -121,12 +123,15 @@ export default function decorate(block) {
   `;
 
   block.innerHTML = chatbotHTML;
+  console.log('Chatbot HTML set, initializing...');
 
   // Initialize chatbot functionality
   initChatbot(block);
 }
 
 function initChatbot(block) {
+  console.log('initChatbot called with block:', block);
+  
   const toggle = block.querySelector('.chatbot-toggle');
   const chatWindow = block.querySelector('.chatbot-window');
   const messagesContainer = block.querySelector('.chatbot-messages');
@@ -137,10 +142,26 @@ function initChatbot(block) {
   const minimizeBtn = block.querySelector('.minimize-btn');
   const typingIndicator = block.querySelector('.typing-indicator');
   const inputArea = block.querySelector('.chatbot-input-area');
+  const statusText = block.querySelector('.chatbot-status');
 
   let isOpen = false;
   let isRecording = false;
   let recognition = null;
+  let originalStatusHTML = '';
+
+  console.log('Chatbot initialized:', {
+    voiceBtn: voiceBtn ? 'found' : 'NOT FOUND',
+    voiceBtnElement: voiceBtn,
+    chatWindow: chatWindow ? 'found' : 'NOT FOUND',
+    messagesContainer: messagesContainer ? 'found' : 'NOT FOUND',
+    inputArea: inputArea ? 'found' : 'NOT FOUND',
+    statusText: statusText ? 'found' : 'NOT FOUND',
+  });
+
+  // Store original status
+  if (statusText) {
+    originalStatusHTML = statusText.innerHTML;
+  }
 
   // Initialize Speech Recognition
   function initSpeechRecognition() {
@@ -161,9 +182,22 @@ function initChatbot(block) {
       isRecording = true;
       voiceBtn.classList.add('recording');
       inputArea.classList.add('recording-active');
+      chatWindow.classList.add('recording-active');
+      messagesContainer.classList.add('recording-active');
+      
+      console.log('Recording started - Classes added:', {
+        messagesContainer: messagesContainer.className,
+        chatWindow: chatWindow.className
+      });
+      
       voiceBtn.querySelector('.mic-icon').style.display = 'none';
       voiceBtn.querySelector('.mic-off-icon').style.display = 'block';
       input.placeholder = 'Listening...';
+      
+      // Update status text
+      if (statusText) {
+        statusText.innerHTML = '<span class="status-indicator"></span>Recording...';
+      }
     };
 
     speechRecognition.onresult = (event) => {
@@ -212,15 +246,20 @@ function initChatbot(block) {
   }
 
   function startRecording() {
+    console.log('startRecording called');
     if (!recognition) {
+      console.log('Initializing speech recognition...');
       recognition = initSpeechRecognition();
     }
     if (recognition) {
       try {
+        console.log('Starting recognition...');
         recognition.start();
       } catch (e) {
         console.error('Error starting recognition:', e);
       }
+    } else {
+      console.warn('Speech recognition not available');
     }
   }
 
@@ -228,9 +267,16 @@ function initChatbot(block) {
     isRecording = false;
     voiceBtn.classList.remove('recording');
     inputArea.classList.remove('recording-active');
+    chatWindow.classList.remove('recording-active');
+    messagesContainer.classList.remove('recording-active');
     voiceBtn.querySelector('.mic-icon').style.display = 'block';
     voiceBtn.querySelector('.mic-off-icon').style.display = 'none';
     input.placeholder = 'Type your message...';
+    
+    // Restore original status
+    if (statusText && originalStatusHTML) {
+      statusText.innerHTML = originalStatusHTML;
+    }
     if (recognition) {
       try {
         recognition.stop();
@@ -240,14 +286,8 @@ function initChatbot(block) {
     }
   }
 
-  // Voice button click handler
-  voiceBtn.addEventListener('click', () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  });
+  // Initialize speech recognition lazily (only when needed)
+  recognition = null;
 
   // Toggle chatbot window
   toggle.addEventListener('click', () => {
@@ -403,4 +443,25 @@ function initChatbot(block) {
 
   // Initialize speech recognition on load
   recognition = initSpeechRecognition();
+
+  // Voice button click handler - Added at the end to ensure all functions are defined
+  console.log('Setting up voice button handler...', { voiceBtn: !!voiceBtn });
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', (e) => {
+      console.log('Voice button clicked!', { isRecording, event: e });
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (isRecording) {
+        console.log('Stopping recording...');
+        stopRecording();
+      } else {
+        console.log('Starting recording...');
+        startRecording();
+      }
+    });
+    console.log('Voice button event listener attached successfully');
+  } else {
+    console.error('Voice button element not found in DOM!');
+  }
 }
