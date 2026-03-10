@@ -40,7 +40,7 @@ Given a user message, output **only** a JSON object (no markdown, no explanation
 - **order_number**: order ID (numeric or alphanumeric)
 - **reason**: free-text reason for cancellation/return
 - **query**: search query string built from product + attributes
-- **attributes**: object with optional keys: color, size, material
+- **attributes**: object with optional keys: color, size, material, min_price, max_price
 
 ### ⚠️ CRITICAL: Using Position Numbers with remove_from_cart
 
@@ -75,7 +75,7 @@ Always extract the position number as the SKU for remove_from_cart when the user
 ❌ "find blue jackets" → product_search (NO number, NO SKU)
 ❌ "search laptops" → product_search (NO number, NO SKU)
 
-**CRITICAL RULE:** If you see ANY digit (0-9) anywhere in the query, assume it's a position reference and use select_product, NOT product_search.
+**CRITICAL RULE:** If you see a SINGLE digit (0-9) that appears to be a position reference ("show 1", "details 2"), use select_product. BUT if the number is part of a price filter ("under 50", "price 100"), use product_search.
 
 **Context Requirement:** select_product requires that a product_search has already been performed in the conversation. This allows users to reference products by position (1, 2, 3...) from search results.
 
@@ -83,8 +83,29 @@ Always extract the position number as the SKU for remove_from_cart when the user
 Colors: red, blue, black, white, green, yellow, pink, purple, gray, brown
 Sizes: xs, s, m, l, xl, xxl
 Materials: cotton, leather, denim, silk, polyester, wool
+Price Range: min_price (number), max_price (number)
 
 Map common misspellings/synonyms to canonical values (e.g. "blu"→"blue", "meduim"→"m", "navy"→"blue", "larg"→"l").
+
+### ⚠️ CRITICAL: check_price vs product_search with price filters
+
+**Use check_price ONLY when:**
+- User asks about the price of a SPECIFIC product they already know: "how much is WSH12", "what's the price of blue shirt"
+- The focus is on getting the price, not finding products
+
+**Use product_search when:**
+- User wants to FIND/SEARCH products with a price constraint: "show shirts under $50", "find shoes under 100", "search laptops price under 500"
+- Query includes verbs like "show", "find", "search", "browse" with price filters
+- Extract price constraints into attributes.min_price and/or attributes.max_price
+
+**Price extraction examples:**
+- "under 50" → max_price: 50
+- "below 100" → max_price: 100
+- "over 30" → min_price: 30
+- "above 20" → min_price: 20
+- "between 20 and 50" → min_price: 20, max_price: 50
+- "10 to 20" → min_price: 10, max_price: 20
+- "from 15 to 30" → min_price: 15, max_price: 30
 
 ## Output Format
 Return ONLY valid JSON. No markdown code fences. No extra text.
@@ -140,7 +161,79 @@ export const INPUT_FEW_SHOT_EXAMPLES = [
             order_number: null,
             reason: null,
             query: 'blue running shoes',
-            attributes: { color: 'blue', size: null, material: null },
+            attributes: { color: 'blue', size: null, material: null, min_price: null, max_price: null },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'show shirts under 50',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'product_search',
+          confidence: 0.96,
+          entities: {
+            product: 'shirts',
+            sku: null,
+            quantity: null,
+            order_number: null,
+            reason: null,
+            query: 'shirts',
+            attributes: { color: null, size: null, material: null, min_price: null, max_price: 50 },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'show shirt below 10',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'product_search',
+          confidence: 0.96,
+          entities: {
+            product: 'shirt',
+            sku: null,
+            quantity: null,
+            order_number: null,
+            reason: null,
+            query: 'shirt',
+            attributes: { color: null, size: null, material: null, min_price: null, max_price: 10 },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'find shoes 10 to 20',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'product_search',
+          confidence: 0.95,
+          entities: {
+            product: 'shoes',
+            sku: null,
+            quantity: null,
+            order_number: null,
+            reason: null,
+            query: 'shoes',
+            attributes: { color: null, size: null, material: null, min_price: 10, max_price: 20 },
           },
         },
       ],

@@ -60,17 +60,8 @@ export default class EcommerceAPI {
     try {
       console.log(`[API] Searching products: ${query}`, attributes);
       
-      // Build filter array based on attributes
-      const filters = [
-        {
-          attribute: 'categoryPath',
-          eq: apiConfig.defaultCategory
-        },
-        {
-          attribute: 'visibility',
-          in: ['Search', 'Catalog, Search']
-        }
-      ];
+      // Build filter array based on user attributes only
+      const filters = [];
       
       // Add color filter if present
       if (attributes.color) {
@@ -95,6 +86,31 @@ export default class EcommerceAPI {
           eq: attributes.material
         });
       }
+      
+      // Add price range filter if present
+      const minPrice = attributes.min_price || attributes.minPrice;
+      const maxPrice = attributes.max_price || attributes.maxPrice;
+      
+      if (minPrice !== undefined || maxPrice !== undefined) {
+        const priceRange = {};
+        if (minPrice !== undefined && minPrice !== null) {
+          priceRange.from = minPrice;
+        } else {
+          priceRange.from = 0; // Default minimum
+        }
+        if (maxPrice !== undefined && maxPrice !== null) {
+          priceRange.to = maxPrice;
+        } else {
+          priceRange.to = 999999; // Default maximum (very high)
+        }
+        
+        filters.push({
+          attribute: 'price',
+          range: priceRange
+        });
+        
+        console.log('[API] Added price filter:', priceRange);
+      }
 
       const variables = {
         phrase: query || '',
@@ -112,7 +128,7 @@ export default class EcommerceAPI {
       const data = await this.graphqlRequest(apiConfig.queries.productSearch, variables);
       
       // Transform response to simplified format
-      const products = data.productSearch.items.map(item => {
+      let products = data.productSearch.items.map(item => {
         const product = item.productView;
         let price = 0;
         
@@ -137,7 +153,7 @@ export default class EcommerceAPI {
       });
       
       return {
-        total: data.productSearch.total_count,
+        total: products.length,
         items: products,
         pageInfo: data.productSearch.page_info
       };

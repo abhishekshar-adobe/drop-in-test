@@ -136,6 +136,7 @@ function initChatbot(block) {
   const quickReplies = block.querySelectorAll('.quick-reply');
   const minimizeBtn = block.querySelector('.minimize-btn');
   const typingIndicator = block.querySelector('.typing-indicator');
+  const inputArea = block.querySelector('.chatbot-input-area');
 
   let isOpen = false;
   let isRecording = false;
@@ -159,6 +160,7 @@ function initChatbot(block) {
     speechRecognition.onstart = () => {
       isRecording = true;
       voiceBtn.classList.add('recording');
+      inputArea.classList.add('recording-active');
       voiceBtn.querySelector('.mic-icon').style.display = 'none';
       voiceBtn.querySelector('.mic-off-icon').style.display = 'block';
       input.placeholder = 'Listening...';
@@ -225,6 +227,7 @@ function initChatbot(block) {
   function stopRecording() {
     isRecording = false;
     voiceBtn.classList.remove('recording');
+    inputArea.classList.remove('recording-active');
     voiceBtn.querySelector('.mic-icon').style.display = 'block';
     voiceBtn.querySelector('.mic-off-icon').style.display = 'none';
     input.placeholder = 'Type your message...';

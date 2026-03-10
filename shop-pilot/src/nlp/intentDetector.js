@@ -158,7 +158,8 @@ export default class IntentDetector {
     const hasSelectionPattern = /\b(select|choose|pick)\b/i.test(dlmOutput.originalText) ||
                                 /\b(show|view|tell|give|get)\s+(me\s+)?(details?|info|information|more|about)/i.test(dlmOutput.originalText) ||
                                 /\bdetails?\s+(of|for|about|on)/i.test(dlmOutput.originalText);
-    const isNumberSelection = hasNumber && hasSelectionPattern;
+    const hasPricePattern = /\b(price|cost|under|below|above|over|between|cheaper|expensive|\$)\b/i.test(dlmOutput.originalText);
+    const isNumberSelection = hasNumber && hasSelectionPattern && !hasPricePattern;
     
     // Comparison-aware scoring: Check for comparison patterns with two items
     const hasComparisonPattern = /\b(compare|comparison|versus|vs|difference\s+between)\b/i.test(dlmOutput.originalText);
@@ -175,6 +176,20 @@ export default class IntentDetector {
       } else if (intentDef.name === 'select_product' || intentDef.name === 'product_search') {
         score -= 2.0; // Penalize other intents when comparison detected
         console.log(`[IntentDetector] Penalizing ${intentDef.name} score by -2.0`);
+      }
+    }
+    
+    // Price filter detection: Check if user wants to search with price constraints
+    const hasPriceFilter = /\b(under|below|above|over|between|less than|more than|cheaper|max|min)\s*(?:\$)?\d+/i.test(dlmOutput.originalText);
+    const hasSearchVerb = /\b(show|find|search|browse|get|display|list)\b/i.test(dlmOutput.originalText);
+    if (hasPriceFilter && hasSearchVerb) {
+      console.log(`[IntentDetector] Price filter detected in search: "${dlmOutput.originalText}"`);
+      if (intentDef.name === 'product_search') {
+        score += 3.5; // Strong boost for product_search when price filter present
+        console.log(`[IntentDetector] Boosting product_search score by 3.5 for price filter`);
+      } else if (intentDef.name === 'check_price') {
+        score -= 2.5; // Penalize check_price when it's actually a filtered search
+        console.log(`[IntentDetector] Penalizing check_price score by -2.5 (filtered search)`);
       }
     }
     
@@ -260,7 +275,7 @@ export default class IntentDetector {
       // Build query from products and nouns
       const queryParts = [];
       
-      // Add normalized attributes to query
+      // Add normalized attributes to query (excluding price)
       if (normalizedAttributes.color) queryParts.push(normalizedAttributes.color);
       if (normalizedAttributes.size) queryParts.push(normalizedAttributes.size);
       if (normalizedAttributes.material) queryParts.push(normalizedAttributes.material);
@@ -274,6 +289,33 @@ export default class IntentDetector {
       
       entities.query = queryParts.join(' ') || 
                        dlmOutput.tokens.filter(t => !dlmOutput.verbs.includes(t)).join(' ');
+      
+      // Extract price filters from text
+      const text = dlmOutput.originalText.toLowerCase();
+      const priceMatch = text.match(/(?:under|below|less\s+than|max|maximum)\s*(?:\$)?(\d+)/i);
+      const minPriceMatch = text.match(/(?:over|above|more\s+than|min|minimum)\s*(?:\$)?(\d+)/i);
+      
+      // Match "between X and/to Y", "from X to Y", or just "X to Y"
+      const betweenMatch = text.match(/(?:between|from)?\s*(?:\$)?(\d+)\s*(?:and|to)\s*(?:\$)?(\d+)/i);
+      
+      // Check if this is actually a price range (has surrounding price context)
+      const isPriceRange = betweenMatch && (
+        /(?:price|cost|\$|between|from)/.test(text.substring(Math.max(0, betweenMatch.index - 20), betweenMatch.index)) ||
+        /(?:price|cost|\$|dollars?)/.test(text.substring(betweenMatch.index, Math.min(text.length, betweenMatch.index + betweenMatch[0].length + 20)))
+      );
+      
+      if (betweenMatch && isPriceRange) {
+        normalizedAttributes.min_price = parseInt(betweenMatch[1], 10);
+        normalizedAttributes.max_price = parseInt(betweenMatch[2], 10);
+      } else {
+        if (priceMatch) {
+          normalizedAttributes.max_price = parseInt(priceMatch[1], 10);
+        }
+        if (minPriceMatch) {
+          normalizedAttributes.min_price = parseInt(minPriceMatch[1], 10);
+        }
+      }
+      
       entities.attributes = normalizedAttributes;
       
     } else if (intentDef.name === 'add_to_cart') {

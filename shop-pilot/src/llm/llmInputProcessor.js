@@ -180,6 +180,8 @@ export default class LLMInputProcessor {
       if (raw.attributes.color) attrs.color = raw.attributes.color;
       if (raw.attributes.size) attrs.size = raw.attributes.size;
       if (raw.attributes.material) attrs.material = raw.attributes.material;
+      if (raw.attributes.min_price != null) attrs.min_price = Number(raw.attributes.min_price);
+      if (raw.attributes.max_price != null) attrs.max_price = Number(raw.attributes.max_price);
       if (Object.keys(attrs).length > 0) entities.attributes = attrs;
     }
 
@@ -188,7 +190,7 @@ export default class LLMInputProcessor {
       if (raw.query) {
         entities.query = String(raw.query);
       } else {
-        // Build query from product + attributes
+        // Build query from product + attributes (excluding price)
         const parts = [];
         if (entities.attributes?.color) parts.push(entities.attributes.color);
         if (entities.attributes?.size) parts.push(entities.attributes.size);

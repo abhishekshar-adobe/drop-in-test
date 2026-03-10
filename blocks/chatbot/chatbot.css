@@ -452,7 +452,10 @@
 .voice-btn.recording {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
-  animation: pulse-recording 1.5s infinite;
+  animation: pulse-recording 1.5s infinite, microphone-shake 0.15s infinite;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7),
+              0 0 20px rgba(239, 68, 68, 0.5),
+              0 0 40px rgba(239, 68, 68, 0.3);
 }
 
 .voice-btn.recording:hover {
@@ -460,14 +463,44 @@
   color: white;
 }
 
+/* Multiple ripple effects */
 .voice-btn.recording::before {
   content: '';
   position: absolute;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.3);
-  animation: ripple 1.5s infinite;
+  border: 2px solid rgba(239, 68, 68, 0.6);
+  animation: ripple-1 1.5s infinite;
+  z-index: -1;
+}
+
+/* Add sound wave bars */
+.voice-btn.recording::after {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 50px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: 
+    linear-gradient(90deg, transparent 0%, transparent 8%, rgba(239, 68, 68, 0.4) 10%, rgba(239, 68, 68, 0.4) 12%, transparent 14%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 18%, rgba(239, 68, 68, 0.5) 20%, rgba(239, 68, 68, 0.5) 22%, transparent 24%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 28%, rgba(239, 68, 68, 0.6) 30%, rgba(239, 68, 68, 0.6) 32%, transparent 34%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 38%, rgba(239, 68, 68, 0.7) 40%, rgba(239, 68, 68, 0.7) 42%, transparent 44%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 48%, rgba(239, 68, 68, 0.8) 50%, rgba(239, 68, 68, 0.8) 52%, transparent 54%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 58%, rgba(239, 68, 68, 0.7) 60%, rgba(239, 68, 68, 0.7) 62%, transparent 64%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 68%, rgba(239, 68, 68, 0.6) 70%, rgba(239, 68, 68, 0.6) 72%, transparent 74%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 78%, rgba(239, 68, 68, 0.5) 80%, rgba(239, 68, 68, 0.5) 82%, transparent 84%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 88%, rgba(239, 68, 68, 0.4) 90%, rgba(239, 68, 68, 0.4) 92%, transparent 94%, transparent 100%);
+  background-size: 100% 20%, 100% 40%, 100% 60%, 100% 80%, 100% 100%, 100% 80%, 100% 60%, 100% 40%, 100% 20%;
+  background-position: center;
+  background-repeat: no-repeat;
+  animation: sound-wave 0.8s infinite;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.8;
 }
 
 @keyframes pulse-recording {
@@ -475,23 +508,153 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.08);
   }
 }
 
-@keyframes ripple {
+@keyframes microphone-shake {
+  0%, 100% {
+    transform: translateX(0) scale(1);
+  }
+  25% {
+    transform: translateX(-1px) scale(1.04);
+  }
+  75% {
+    transform: translateX(1px) scale(1.04);
+  }
+}
+
+@keyframes ripple-1 {
   0% {
     transform: scale(1);
     opacity: 1;
   }
   100% {
-    transform: scale(1.8);
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes sound-wave {
+  0%, 100% {
+    background-size: 100% 20%, 100% 40%, 100% 60%, 100% 80%, 100% 100%, 100% 80%, 100% 60%, 100% 40%, 100% 20%;
+  }
+  50% {
+    background-size: 100% 40%, 100% 60%, 100% 80%, 100% 100%, 100% 100%, 100% 100%, 100% 80%, 100% 60%, 100% 40%;
+  }
+}
+
+/* Recording indicator overlay */
+.chatbot-input-area.recording-active {
+  position: relative;
+}
+
+.chatbot-input-area.recording-active::before {
+  content: '🎤 Listening...';
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+  animation: recording-banner-bounce 2s infinite;
+  z-index: 10;
+}
+
+@keyframes recording-banner-bounce {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-5px);
+  }
+}
+
+/* Make input glow when recording */
+.chatbot-input-area.recording-active .chatbot-input {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1),
+              0 0 20px rgba(239, 68, 68, 0.2);
+  animation: input-glow 2s infinite;
+}
+
+@keyframes input-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1),
+                0 0 20px rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2),
+                0 0 30px rgba(239, 68, 68, 0.3);
+  }
+}
+
+/* Particle effects around voice button */
+.voice-btn.recording {
+  position: relative;
+  overflow: visible;
+}
+
+/* Create particles using pseudo elements on container */
+.input-container:has(.voice-btn.recording)::before,
+.input-container:has(.voice-btn.recording)::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ef4444 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.input-container:has(.voice-btn.recording)::before {
+  right: 50px;
+  top: 10px;
+  animation: particle-float-1 2s infinite;
+}
+
+.input-container:has(.voice-btn.recording)::after {
+  right: 40px;
+  top: 30px;
+  animation: particle-float-2 2.5s infinite;
+}
+
+@keyframes particle-float-1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(10px, -40px) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes particle-float-2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-15px, -45px) scale(0);
     opacity: 0;
   }
 }
 
 /* Voice button tooltip */
-.voice-btn::after {
+.voice-btn:not(.recording)::after {
   content: 'Click to speak';
   position: absolute;
   bottom: 100%;
@@ -508,15 +671,12 @@
   transition: all 0.2s ease;
   pointer-events: none;
   margin-bottom: 8px;
+  z-index: 100;
 }
 
-.voice-btn:hover::after {
+.voice-btn:not(.recording):hover::after {
   opacity: 1;
   visibility: visible;
-}
-
-.voice-btn.recording::after {
-  content: 'Click to stop';
 }
 
 /* Typing Indicator */
@@ -590,5 +750,29 @@
   
   .typing-indicator span {
     animation: none;
+  }
+  
+  /* Disable voice recording animations */
+  .voice-btn.recording {
+    animation: none;
+  }
+  
+  .voice-btn.recording::before,
+  .voice-btn.recording::after {
+    animation: none;
+    display: none;
+  }
+  
+  .chatbot-input-area.recording-active::before {
+    animation: none;
+  }
+  
+  .chatbot-input-area.recording-active .chatbot-input {
+    animation: none;
+  }
+  
+  .input-container:has(.voice-btn.recording)::before,
+  .input-container:has(.voice-btn.recording)::after {
+    display: none;
   }
 }

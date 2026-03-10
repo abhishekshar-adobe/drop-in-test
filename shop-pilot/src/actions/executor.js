@@ -159,18 +159,32 @@ export default class ActionExecutor {
     
     console.log('[Executor] Search results:', results);
     
+    // Build search description with filters
+    let searchDesc = `"${entities.query}"`;
+    const filters = [];
+    if (entities.attributes) {
+      if (entities.attributes.color) filters.push(entities.attributes.color);
+      if (entities.attributes.size) filters.push(`size ${entities.attributes.size}`);
+      if (entities.attributes.material) filters.push(entities.attributes.material);
+      if (entities.attributes.max_price) filters.push(`under $${entities.attributes.max_price}`);
+      if (entities.attributes.min_price) filters.push(`over $${entities.attributes.min_price}`);
+    }
+    if (filters.length > 0) {
+      searchDesc += ` (${filters.join(', ')})`;
+    }
+    
     if (results.total === 0) {
       return {
         success: false,
         intent: 'product_search',
-        message: `😞 No products found matching "${entities.query}"`
+        message: `😞 No products found matching ${searchDesc}`
       };
     }
 
     return {
       success: true,
       intent: 'product_search',
-      message: `🔍 Found ${results.total} product${results.total > 1 ? 's' : ''} matching "${entities.query}"`,
+      message: `🔍 Found ${results.total} product${results.total > 1 ? 's' : ''} matching ${searchDesc}`,
       data: results,
       displayAs: 'ui' // Flag to render as UI component
     };
