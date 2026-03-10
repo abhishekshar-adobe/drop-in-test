@@ -124,6 +124,10 @@ export default class ActionExecutor {
         result = await this.handleAnalyticsQuery(intent.entities, intent.text);
         break;
       
+      case 'remove_from_cart':
+        result = await this.handleRemoveFromCart(intent.entities);
+        break;
+      
       case 'reset_cart':
       case 'clear_cart':
         result = await this.handleResetCart();
@@ -587,6 +591,101 @@ export default class ActionExecutor {
         success: false,
         intent: 'return_order',
         message: `❌ Failed to request return: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Handle remove from cart - remove a specific item by SKU or position
+   */
+  async handleRemoveFromCart(entities) {
+    try {
+      // Validate SKU is present
+      if (!entities.sku) {
+        return {
+          success: false,
+          intent: 'remove_from_cart',
+          message: `❌ Cannot remove item without product SKU. Please specify which item to remove.`,
+        };
+      }
+      
+      // Get current cart data
+      const cart = await this.api.getCart();
+      
+      // Check if cart is empty
+      if (!cart || !cart.items || cart.items.length === 0) {
+        return {
+          success: false,
+          intent: 'remove_from_cart',
+          message: '🛒 Your cart is empty. There are no items to remove.',
+          data: cart
+        };
+      }
+      
+      let itemToRemove = null;
+      
+      // First, try to find the item by exact SKU match
+      itemToRemove = cart.items.find(item => 
+        item.sku === entities.sku || 
+        item.product?.sku === entities.sku ||
+        item.configurableOptions?.some(opt => opt.value_label === entities.sku)
+      );
+      
+      // If not found by SKU and it's a number, treat it as a cart position (1-based)
+      if (!itemToRemove && /^\d{1,2}$/.test(entities.sku)) {
+        const position = parseInt(entities.sku, 10);
+        if (position >= 1 && position <= cart.items.length) {
+          itemToRemove = cart.items[position - 1];
+          console.log(`[Executor] Resolved cart position ${position} to item:`, {
+            sku: itemToRemove.sku,
+            name: itemToRemove.product?.name || itemToRemove.name
+          });
+        } else {
+          return {
+            success: false,
+            intent: 'remove_from_cart',
+            message: `❌ Your cart only has ${cart.items.length} item${cart.items.length !== 1 ? 's' : ''}. Position ${position} is out of range.`,
+            suggestion: 'Use "show cart" to see all items in your cart.'
+          };
+        }
+      }
+      
+      if (!itemToRemove) {
+        return {
+          success: false,
+          intent: 'remove_from_cart',
+          message: `❌ Item with SKU "${entities.sku}" not found in your cart.`,
+          suggestion: 'Use "show cart" to see all items in your cart.'
+        };
+      }
+      
+      // Import updateProductsFromCart from storefront-cart API
+      const { updateProductsFromCart } = await import('../../../scripts/__dropins__/storefront-cart/api.js');
+      
+      // Remove the item by setting quantity to 0 using its uid
+      console.log('[Executor] Removing item from cart:', { uid: itemToRemove.uid, sku: itemToRemove.sku || itemToRemove.product?.sku });
+      
+      const result = await updateProductsFromCart([{
+        uid: itemToRemove.uid,
+        quantity: 0
+      }]);
+      
+      console.log('[Executor] Item removed successfully:', result);
+      
+      const productName = itemToRemove.product?.name || itemToRemove.name || itemToRemove.sku || entities.sku;
+      
+      return {
+        success: true,
+        intent: 'remove_from_cart',
+        message: `🗑️ Removed ${productName} from your cart.`,
+        data: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        intent: 'remove_from_cart',
+        message: `❌ Failed to remove item from cart: ${error.message}`,
+        error: error.message
       };
     }
   }

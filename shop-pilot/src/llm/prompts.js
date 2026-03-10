@@ -30,16 +30,25 @@ Given a user message, output **only** a JSON object (no markdown, no explanation
 | cancel_order       | Cancel an order                                | order_number, reason            |
 | return_order       | Request a return                               | order_number, reason            |
 | analytics_query    | Ask about spending, order stats                | (product, time_range optional)  |
+| remove_from_cart   | Remove a specific item from cart               | sku                             |
 | reset_cart         | Clear / empty / reset shopping cart            | (none)                          |
 
 ## Entity Reference
 - **product**: product name/type (shoes, laptop, jacket, etc.)
-- **sku**: product SKU code like "WSH12" (uppercase letters + digits)
+- **sku**: product SKU code like "WSH12" (uppercase letters + digits), OR a position number (1, 2, 3...) for referencing items
 - **quantity**: integer, default 1
 - **order_number**: order ID (numeric or alphanumeric)
 - **reason**: free-text reason for cancellation/return
 - **query**: search query string built from product + attributes
 - **attributes**: object with optional keys: color, size, material
+
+### ⚠️ CRITICAL: Using Position Numbers with remove_from_cart
+
+For **remove_from_cart**, position numbers (1, 2, 3...) can refer to:
+1. Items from the cart (e.g., "remove item 4 from cart" means remove the 4th item in the cart)
+2. Items from recent search results (if the user previously searched)
+
+Always extract the position number as the SKU for remove_from_cart when the user provides a number.
 
 ### ⚠️ CRITICAL: product_search vs select_product Decision Rules
 
@@ -98,13 +107,15 @@ Return ONLY valid JSON. No markdown code fences. No extra text.
 }
 
 ## Rules
-1. Detect up to 2 intents if the query clearly expresses multiple actions.
-2. Assign confidence from 0.0 to 1.0 — 1.0 means absolutely certain.
-3. Correct typos and informal language when extracting entities.
-4. **CRITICAL:** If the query contains ANY number or SKU code for a SINGLE product, use select_product. If it contains TWO numbers/SKUs with comparison words (compare, versus, vs), use compare_products.
-5. Never invent SKUs yourself — only extract them if the user explicitly provided one.
-6. For analytics_query, set query to the full user text.
-7. Position numbers (1, 2, 3...) should be treated as SKU references for select_product or compare_products intents depending on context.`;
+1. Detect multiple intents if the query clearly expresses multiple actions.
+2. **CRITICAL: For add_to_cart or add_to_wishlist with multiple products:** If the user says "add X and Y and Z to cart", generate SEPARATE add_to_cart intents for EACH product (X, Y, Z). Each intent should have one SKU.
+3. **CRITICAL: Remove vs Add:** If the query contains "remove", "delete", "take out", or similar removal words, use remove_from_cart intent, EVEN if followed by "to cart" (common typo for "from cart").
+4. Assign confidence from 0.0 to 1.0 — 1.0 means absolutely certain.
+5. Correct typos and informal language when extracting entities.
+6. **CRITICAL:** If the query contains ANY number or SKU code for a SINGLE product, use select_product. If it contains TWO numbers/SKUs with comparison words (compare, versus, vs), use compare_products.
+7. Never invent SKUs yourself — only extract them if the user explicitly provided one.
+8. For analytics_query, set query to the full user text.
+9. Position numbers (1, 2, 3...) should be treated as SKU references for select_product or compare_products intents depending on context.`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. FEW-SHOT EXAMPLES for input processing
@@ -150,6 +161,128 @@ export const INPUT_FEW_SHOT_EXAMPLES = [
             product: null,
             sku: 'WSH12',
             quantity: 1,
+            order_number: null,
+            reason: null,
+            query: null,
+            attributes: { color: null, size: null, material: null },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'add ADB386 and 2 and 3 to cart',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'add_to_cart',
+          confidence: 0.98,
+          entities: {
+            product: null,
+            sku: 'ADB386',
+            quantity: 1,
+            order_number: null,
+            reason: null,
+            query: null,
+            attributes: { color: null, size: null, material: null },
+          },
+        },
+        {
+          name: 'add_to_cart',
+          confidence: 0.98,
+          entities: {
+            product: null,
+            sku: '2',
+            quantity: 1,
+            order_number: null,
+            reason: null,
+            query: null,
+            attributes: { color: null, size: null, material: null },
+          },
+        },
+        {
+          name: 'add_to_cart',
+          confidence: 0.98,
+          entities: {
+            product: null,
+            sku: '3',
+            quantity: 1,
+            order_number: null,
+            reason: null,
+            query: null,
+            attributes: { color: null, size: null, material: null },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'remove ADB364 from cart',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'remove_from_cart',
+          confidence: 0.97,
+          entities: {
+            product: null,
+            sku: 'ADB364',
+            quantity: null,
+            order_number: null,
+            reason: null,
+            query: null,
+            attributes: { color: null, size: null, material: null },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'remove 4 to cart',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'remove_from_cart',
+          confidence: 0.95,
+          entities: {
+            product: null,
+            sku: '4',
+            quantity: null,
+            order_number: null,
+            reason: null,
+            query: null,
+            attributes: { color: null, size: null, material: null },
+          },
+        },
+      ],
+    }),
+  },
+  {
+    role: 'user',
+    content: 'remove item 4 from cart',
+  },
+  {
+    role: 'assistant',
+    content: JSON.stringify({
+      intents: [
+        {
+          name: 'remove_from_cart',
+          confidence: 0.97,
+          entities: {
+            product: null,
+            sku: '4',
+            quantity: null,
             order_number: null,
             reason: null,
             query: null,

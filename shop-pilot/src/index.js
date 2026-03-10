@@ -474,19 +474,11 @@ export default class ShopPilot {
    * When user says "compare 1 and 2", map both to respective SKUs
    */
   resolveProductNumbers(scoredIntents, dlmOutput) {
-    // Safety check: dlmOutput might be undefined when using LLM path
-    if (!dlmOutput) {
-      return;
-    }
-    
     // Only resolve for intents that work with products from context
-    const contextIntents = ['select_product', 'compare_products', 'add_to_cart', 'add_to_wishlist'];
+    const contextIntents = ['select_product', 'compare_products', 'add_to_cart', 'add_to_wishlist', 'remove_from_cart'];
     
     for (const intent of scoredIntents) {
       if (!contextIntents.includes(intent.name)) continue;
-      
-      // Check if we have numbers in the DLM output
-      if (!dlmOutput.numbers || dlmOutput.numbers.length === 0) continue;
       
       // Check if we have products in context
       if (!this.conversationContext.lastProducts || 
@@ -521,7 +513,7 @@ export default class ShopPilot {
         }
         
         // Also handle the case where both come from dlmOutput.numbers (not already set)
-        if (!intent.entities.sku1 || !intent.entities.sku2) {
+        if (dlmOutput && (!intent.entities.sku1 || !intent.entities.sku2)) {
           const numbers = dlmOutput.numbers.filter(n => {
             const num = typeof n === 'number' ? n : parseInt(n, 10);
             return num >= 1 && num <= this.conversationContext.lastProducts.length;
@@ -552,26 +544,51 @@ export default class ShopPilot {
       }
       
       // Handle single product intents (select_product, add_to_cart, add_to_wishlist)
-      // Find the first number that looks like a product position (1-based)
-      const productNumber = dlmOutput.numbers.find(n => {
-        const num = typeof n === 'number' ? n : parseInt(n, 10);
-        return num >= 1 && num <= this.conversationContext.lastProducts.length;
-      });
+      // Check if the SKU is already set but is a position number that needs resolution
+      if (intent.entities.sku && this.isProductPosition(intent.entities.sku)) {
+        const index = parseInt(intent.entities.sku, 10);
+        if (index >= 1 && index <= this.conversationContext.lastProducts.length) {
+          const selectedProduct = this.conversationContext.lastProducts[index - 1];
+          
+          if (selectedProduct && selectedProduct.sku) {
+            console.log(`[ShopPilot] Resolved SKU position ${index} to actual SKU: ${selectedProduct.sku}`);
+            
+            // Update entities with the actual SKU
+            intent.entities.sku = selectedProduct.sku;
+            intent.entities.product = selectedProduct.name || selectedProduct.title;
+            
+            // For add_to_cart, ensure quantity is set
+            if (intent.name === 'add_to_cart' && !intent.entities.quantity) {
+              intent.entities.quantity = 1; // Default to 1
+            }
+          }
+        }
+        continue; // Already handled, skip dlmOutput path
+      }
       
-      if (productNumber) {
-        const index = typeof productNumber === 'number' ? productNumber : parseInt(productNumber, 10);
-        const selectedProduct = this.conversationContext.lastProducts[index - 1];
+      // Fallback: use dlmOutput if available and SKU not already set
+      if (dlmOutput && dlmOutput.numbers && !intent.entities.sku) {
+        // Find the first number that looks like a product position (1-based)
+        const productNumber = dlmOutput.numbers.find(n => {
+          const num = typeof n === 'number' ? n : parseInt(n, 10);
+          return num >= 1 && num <= this.conversationContext.lastProducts.length;
+        });
         
-        if (selectedProduct && selectedProduct.sku) {
-          console.log(`[ShopPilot] Resolved product number ${index} to SKU: ${selectedProduct.sku}`);
+        if (productNumber) {
+          const index = typeof productNumber === 'number' ? productNumber : parseInt(productNumber, 10);
+          const selectedProduct = this.conversationContext.lastProducts[index - 1];
           
-          // Update entities with the actual SKU
-          intent.entities.sku = selectedProduct.sku;
-          intent.entities.product = selectedProduct.name || selectedProduct.title;
-          
-          // For add_to_cart, preserve quantity if it's different from the product number
-          if (intent.name === 'add_to_cart' && !intent.entities.quantity) {
-            intent.entities.quantity = 1; // Default to 1
+          if (selectedProduct && selectedProduct.sku) {
+            console.log(`[ShopPilot] Resolved product number ${index} to SKU: ${selectedProduct.sku}`);
+            
+            // Update entities with the actual SKU
+            intent.entities.sku = selectedProduct.sku;
+            intent.entities.product = selectedProduct.name || selectedProduct.title;
+            
+            // For add_to_cart, preserve quantity if it's different from the product number
+            if (intent.name === 'add_to_cart' && !intent.entities.quantity) {
+              intent.entities.quantity = 1; // Default to 1
+            }
           }
         }
       }
@@ -679,6 +696,7 @@ export default class ShopPilot {
       'cancel_order': 'Cancel order',
       'return_order': 'Request return',
       'analytics_query': 'Analytics',
+      'remove_from_cart': 'Remove from cart',
       'reset_cart': 'Clear cart'
     };
     return displayNames[intentName] || intentName;

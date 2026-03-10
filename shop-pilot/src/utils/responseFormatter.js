@@ -121,6 +121,20 @@ const RESPONSE_TEMPLATES = {
     ]
   },
   
+  remove_from_cart: {
+    success: [
+      "🗑️ Removed {product} from your cart.",
+      "🗑️ Done! {product} has been removed from your cart.",
+      "🗑️ {product} is no longer in your cart.",
+      "🗑️ I've removed {product} from your cart."
+    ],
+    error: [
+      "❌ Couldn't find that item in your cart. {reason}",
+      "❌ Item not found in cart: {reason}",
+      "❌ Unable to remove: {reason}"
+    ]
+  },
+  
   reset_cart: {
     success: [
       "🗑️ Your cart has been cleared!",
@@ -242,6 +256,11 @@ function extractValues(data, intent) {
   switch (intent) {
     case 'add_to_cart':
     case 'add_to_wishlist':
+      values.product = data.data?.product?.name || data.data?.productName || 'the item';
+      values.reason = extractErrorReason(data.message);
+      break;
+      
+    case 'remove_from_cart':
       values.product = data.data?.product?.name || data.data?.productName || 'the item';
       values.reason = extractErrorReason(data.message);
       break;

@@ -120,6 +120,7 @@ export default class LLMInputProcessor {
       'cancel_order',
       'return_order',
       'analytics_query',
+      'remove_from_cart',
       'reset_cart',
     ]);
 
@@ -135,6 +136,7 @@ export default class LLMInputProcessor {
       cancel_order: ['order_number', 'reason'],
       return_order: ['order_number', 'reason'],
       analytics_query: [],
+      remove_from_cart: ['sku'],
       reset_cart: [],
     };
 
@@ -226,6 +228,7 @@ export default class LLMInputProcessor {
       cancel_order: 0.9,
       return_order: 0.9,
       analytics_query: 0.9,
+      remove_from_cart: 0.9,
       reset_cart: 0.85,
     };
     return priorities[name] ?? 0.5;

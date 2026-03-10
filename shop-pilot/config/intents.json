@@ -121,6 +121,14 @@
       "confidenceThreshold": 0.6
     },
     {
+      "name": "remove_from_cart",
+      "patterns": ["remove from cart", "delete from cart", "remove item", "delete item", "take out", "remove", "delete"],
+      "entities": ["product", "sku"],
+      "requiredSlots": ["sku"],
+      "priority": 0.9,
+      "confidenceThreshold": 0.75
+    },
+    {
       "name": "reset_cart",
       "patterns": ["reset cart", "clear cart", "empty cart", "remove all from cart", "delete cart", "clear my cart", "empty my cart", "reset my cart"],
       "entities": [],

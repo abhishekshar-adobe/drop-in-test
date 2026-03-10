@@ -111,7 +111,7 @@ export default class IntentDetector {
     const topIntent = sorted[0];
     
     // Define intent exclusion rules: specific intents block generic ones
-    const specificIntents = ['view_cart', 'view_orders', 'track_order', 'add_to_wishlist', 'add_to_cart', 'check_price', 'select_product'];
+    const specificIntents = ['view_cart', 'view_orders', 'track_order', 'add_to_wishlist', 'add_to_cart', 'remove_from_cart', 'check_price', 'select_product'];
     const genericIntents = ['product_search'];
     
     // If top intent is specific, don't include generic product_search
@@ -175,6 +175,19 @@ export default class IntentDetector {
       } else if (intentDef.name === 'select_product' || intentDef.name === 'product_search') {
         score -= 2.0; // Penalize other intents when comparison detected
         console.log(`[IntentDetector] Penalizing ${intentDef.name} score by -2.0`);
+      }
+    }
+    
+    // Remove-aware scoring: Check if user wants to remove items
+    const hasRemovalPattern = /\b(remove|delete|take\s+out|get\s+rid\s+of)\b/i.test(dlmOutput.originalText);
+    if (hasRemovalPattern) {
+      console.log(`[IntentDetector] Removal pattern detected: "${dlmOutput.originalText}"`);
+      if (intentDef.name === 'remove_from_cart') {
+        score += 4.0; // Strong boost for remove_from_cart when removal word present
+        console.log(`[IntentDetector] Boosting remove_from_cart score by 4.0`);
+      } else if (intentDef.name === 'add_to_cart' || intentDef.name === 'add_to_wishlist') {
+        score -= 3.0; // Strong penalty for add actions when removal word present
+        console.log(`[IntentDetector] Penalizing ${intentDef.name} score by -3.0 due to removal word`);
       }
     }
     
@@ -273,6 +286,16 @@ export default class IntentDetector {
       entities.product = dlmOutput.entities.products[0];
       entities.attributes = normalizedAttributes;
       entities.sku = dlmOutput.entities.sku || null; // Extract SKU from DLM
+      
+    } else if (intentDef.name === 'remove_from_cart') {
+      // Extract SKU or product identifier for removal
+      entities.sku = dlmOutput.entities.sku || null;
+      entities.product = dlmOutput.entities.products[0] || null;
+      // If no SKU but there's a number, use it (could be a position reference)
+      if (!entities.sku && dlmOutput.numbers && dlmOutput.numbers.length > 0) {
+        entities.sku = String(dlmOutput.numbers[0]);
+      }
+      entities.attributes = normalizedAttributes;
       
     } else if (intentDef.name === 'select_product') {
       // Extract SKU from DLM - this is the primary entity for select_product
