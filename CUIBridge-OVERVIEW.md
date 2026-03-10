@@ -43,13 +43,13 @@ Works across any web domain:
 Dual-engine architecture ensures 100% uptime:
 ```
 ┌─────────────────────────────────────────┐
-│  Primary: AI-Powered (95% accuracy)    │
-│  Uses LLM for complex queries          │
+│  Primary: AI-Powered (95% accuracy)     │
+│  Uses LLM for complex queries           │
 └──────────────┬──────────────────────────┘
                ↓ automatic fallback
 ┌─────────────────────────────────────────┐
-│  Backup: Rule-Based (85% accuracy)     │
-│  Pattern matching, always works        │
+│  Backup: Rule-Based (85% accuracy)      │
+│  Pattern matching, always works         │
 └─────────────────────────────────────────┘
 ```
 
@@ -250,31 +250,31 @@ Bot:  "[Lists all dining transactions with dates and amounts]"
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     USER INTERFACE                          │
-│        💬 Text Input  │  🎤 Voice  │  📱 Mobile App         │
+│        💬 Text Input  │  🎤 Voice  │  📱 Mobile App          │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                 CUIBridge CORE ENGINE                        │
+│                 CUIBridge CORE ENGINE                       │
 │                                                             │
-│  ┌───────────────────────────────────────────────────────┐ │
-│  │  1. INTENT DETECTION                                  │ │
-│  │                                                       │ │
-│  │  Path A: LLM-Powered 🤖                              │ │
-│  │  ┌────────────────────────────────────────────┐     │ │
-│  │  │ • Ollama + Llama 3.1 (local)              │     │ │
-│  │  │ • GPT-4 / Claude (cloud options)          │     │ │
-│  │  │ • Few-shot learning                       │     │ │
-│  │  │ • 95% accuracy                            │     │ │
-│  │  └────────────────────────────────────────────┘     │ │
-│  │           ↓ (automatic fallback if unavailable)     │ │
-│  │  Path B: Rule-Based 📋                              │ │
-│  │  ┌────────────────────────────────────────────┐     │ │
-│  │  │ • Pattern matching                         │     │ │
-│  │  │ • Entity extraction                        │     │ │
-│  │  │ • Domain Language Model (DLM)              │     │ │
-│  │  │ • 85% accuracy, 100% uptime                │     │ │
-│  │  └────────────────────────────────────────────┘     │ │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  1. INTENT DETECTION                                  │  │
+│  │                                                       │  │
+│  │  Path A: LLM-Powered 🤖                               │  │
+│  │  ┌────────────────────────────────────────────┐       │  │
+│  │  │ • Ollama + Llama 3.1 (local)               │       │  │
+│  │  │ • GPT-4 / Claude (cloud options)           │       │ │
+│  │  │ • Few-shot learning                        │       │ │
+│  │  │ • 95% accuracy                             │       │ │
+│  │  └────────────────────────────────────────────┘       │ │
+│  │           ↓ (automatic fallback if unavailable)       │ │
+│  │  Path B: Rule-Based 📋                                │ │
+│  │  ┌────────────────────────────────────────────┐       │ │
+│  │  │ • Pattern matching                         │       │ │
+│  │  │ • Entity extraction                        │       │ │
+│  │  │ • Domain Language Model (DLM)              │       │ │
+│  │  │ • 85% accuracy, 100% uptime                │       │ │
+│  │  └────────────────────────────────────────────┘       │ │
 │  └───────────────────────────────────────────────────────┘ │
 │                         │                                   │
 │                         ▼                                   │
@@ -690,26 +690,6 @@ npm start
 - 24/7 support options
 - White-label capability
 - Dedicated account management
-
----
-
-## 📞 Contact & Resources
-
-**Website**: https://cuibridge.io  
-**Email**: contact@cuibridge.io  
-**GitHub**: https://github.com/cuibridge/core  
-**Documentation**: https://docs.cuibridge.io  
-**Community**: https://discord.gg/cuibridge
-
-**Case Studies:**
-- [E-commerce Success Story](./case-studies/ecommerce.pdf)
-- [Healthcare Implementation](./case-studies/healthcare.pdf)
-- [Banking Transformation](./case-studies/banking.pdf)
-
-**Awards:**
-- 🏆 2026 Innovation Award - Web Technologies Conference
-- 🏆 Best AI Product - TechCrunch Disrupt Finalist
-- 🏆 Top 10 Developer Tools - Product Hunt
 
 ---
 
